@@ -166,7 +166,6 @@ class Transform:
 
         transformed_message = dict()
         batch_time = datetime.today()
-        print(f"batch_time: {batch_time}")
 
         for rule in self.rules:
             if rule.src[:2] == "$$":
