@@ -1,4 +1,4 @@
 *
-!src/
+!src/*.py
 !poetry.lock
 !pyproject.toml

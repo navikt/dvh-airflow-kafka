@@ -1,13 +1,13 @@
 import os
 from typing import Dict, Text, Any, List
-import cx_Oracle
+import oracledb
 from base import Target
 
 
 class OracleTarget(Target):
     """Oracle Target"""
 
-    connection_class = cx_Oracle.connect
+    connection_class = oracledb.connect
 
     def write_batch(self, batch: List[Dict[Text, Any]]) -> None:
         table = self.config["table"]
