@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "dvh-airflow-kafka"
+version = "0.0.1"
+description = ""
+authors = ["NAV DVH"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+kafka-python = "^2.0.2"
+avro = "^1.11.0"
+dateparser = "^1.1.1"
+dataverk-vault = "^0.1.10"
+PyYAML = "^6.0"
+requests = "^2.28.1"
+python-dotenv = "^0.20.0"
+cx-Oracle = "^8.3.0"
+
+[tool.poetry.dev-dependencies]
+black = "^22.6.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
