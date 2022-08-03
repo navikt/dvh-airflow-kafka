@@ -139,7 +139,7 @@ class KafkaSource(Source):
             ]
 
             if len(batch) > 0:
-                yield batch
+                yield batch_filtered
 
             if tp_done == tp_set:
                 break

@@ -3,6 +3,7 @@ from typing import Dict, Text, Any, List, Tuple
 import oracledb
 from base import Target
 from transform import int_ms_to_date
+import json
 
 
 class OracleTarget(Target):
@@ -22,11 +23,12 @@ class OracleTarget(Target):
 
     def get_kode67(self, batch: List[Dict[Text, Any]]) -> List[Tuple]:
         k6_conf = self.config.get("k6-filter")
+        json_batch = [json.loads(msg["kafka_message"]) for msg in batch]
         if k6_conf is not None:
             timestamp_col = k6_conf["timestamp"]
             timestamp = int_ms_to_date(batch[-1][timestamp_col])
             timestamp_bind_value = {timestamp_col: timestamp}
-            personer = [msg["kafka_message"][k6_conf["col"]] for msg in batch]
+            personer = [msg[k6_conf["col"]] for msg in json_batch]
 
             bind_names = [":" + str(i + 1) for i in range(len(personer))]
             in_bind_names = (",".join(bind_names))
