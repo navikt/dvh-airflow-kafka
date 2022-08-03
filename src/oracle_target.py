@@ -26,7 +26,7 @@ class OracleTarget(Target):
             timestamp_col = k6_conf["timestamp"]
             timestamp = int_ms_to_date(batch[-1][timestamp_col])
             timestamp_bind_value = {timestamp_col: timestamp}
-            personer = [msg[k6_conf["col"]] for msg in batch["kafka_message"]]
+            personer = [msg["kafka_message"][k6_conf["col"]] for msg in batch]
 
             bind_names = [":" + str(i + 1) for i in range(len(personer))]
             in_bind_names = (",".join(bind_names))
