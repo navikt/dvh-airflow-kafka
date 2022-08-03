@@ -1,5 +1,6 @@
 from base import Source, Target
 from transform import Transform
+import yaml
 
 
 class Mapping:
@@ -27,4 +28,12 @@ class Mapping:
 
     def run_mapping(self, once: bool = False) -> None:
         for batch in self.source.read_batches():
+            kode67 = self.target.get_kode67(batch)
+            kode67_personer = set()
+            for personer in kode67:
+                for person in personer:
+                    kode67_personer.add(person)
+            for msg in batch:
+                if msg["kafka_message"][self.target.config["k6-filter"]["col"]] in kode67_personer:
+                    msg["kafka_message"] = None
             self.target.write_batch(list(map(self.transform, batch)))

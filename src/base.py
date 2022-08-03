@@ -1,4 +1,4 @@
-from typing import Generator, Dict, Text, Any, List
+from typing import Generator, Dict, Text, Any, List, Tuple
 
 
 class Source:
@@ -22,6 +22,9 @@ class Target:
         self.config = config
 
     def write_batch(self, *args, **kwargs) -> None:
+        raise NotImplementedError
+
+    def get_kode67(self, *args, **kwargs) -> List[Tuple]:
         raise NotImplementedError
 
     def get_kv_from_config_by_method(self, method):

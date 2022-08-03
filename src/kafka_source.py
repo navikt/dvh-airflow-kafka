@@ -132,8 +132,11 @@ class KafkaSource(Source):
                 )
                 if msg["kafka_timestamp"] >= ts_stop:
                     tp_done.add(tp)
-                if tp in tp_done:
-                    batch.remove(msg)
+            batch_filtered = [
+                msg for msg in batch
+                if TopicPartition(msg["kafka_topic"], msg["kafka_partition"])
+                not in tp_done
+            ]
 
             if len(batch) > 0:
                 yield batch
