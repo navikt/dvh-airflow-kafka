@@ -138,7 +138,7 @@ class KafkaSource(Source):
                 not in tp_done
             ]
 
-            if len(batch) > 0:
+            if len(batch_filtered) > 0:
                 yield batch_filtered
 
             if tp_done == tp_set:
