@@ -1,6 +1,6 @@
 from base import Source, Target
 from transform import Transform
-import yaml
+import json
 
 
 class Mapping:
@@ -34,6 +34,7 @@ class Mapping:
                 for person in personer:
                     kode67_personer.add(person)
             for msg in batch:
-                if msg["kafka_message"][self.target.config["k6-filter"]["col"]] in kode67_personer:
+                kafka_message = json.loads(msg["kafka_message"])
+                if kafka_message[self.target.config["k6-filter"]["col"]] in kode67_personer:
                     msg["kafka_message"] = None
             self.target.write_batch(list(map(self.transform, batch)))
