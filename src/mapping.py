@@ -25,9 +25,12 @@ class Mapping:
         self.source = source
         self.target = target
         self.transform = transform
+        self.total_messages = 0
 
     def run_mapping(self, once: bool = False) -> None:
+        total_messages = 0
         for batch in self.source.read_batches():
+            total_messages += len(batch)
             kode67 = self.target.get_kode67(batch)
             kode67_personer = set()
             for personer in kode67:
@@ -38,3 +41,5 @@ class Mapping:
                 if kafka_message[self.target.config["k6-filter"]["col"]] in kode67_personer:
                     msg["kafka_message"] = None
             self.target.write_batch(list(map(self.transform, batch)))
+        with open("/airflow/xcom/return.json", "w") as xcom:
+            xcom.write(str(total_messages))
