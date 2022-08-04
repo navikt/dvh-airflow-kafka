@@ -11,13 +11,13 @@ class OracleTarget(Target):
 
     connection_class = oracledb.connect
 
-    def _oracle_connection() -> oracledb.connect:
+    def _oracle_connection(self) -> oracledb.connect:
         return OracleTarget.connection_class(
             user=os.environ["DB_USER"],
             password=os.environ["DB_PASSWORD"],
             dsn=os.environ["DB_DSN"],
             encoding="utf-8",
-            nencoding="utf-8",
+            nencoding="utf-8"
         )
 
 
