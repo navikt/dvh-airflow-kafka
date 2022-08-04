@@ -9,3 +9,9 @@
 `sqlplus system/example@//localhost:1521/XEPDB1`
 
 `sqlplus kafka/example@//localhost:1521/XEPDB1`
+
+## docker
+
+`d build . -t ghcr.io/navikt/dvh-kafka-airflow-consumer:0.2.`
+
+`d push ghcr.io/navikt/dvh-kafka-airflow-consumer:0.2.`
