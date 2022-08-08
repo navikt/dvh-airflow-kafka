@@ -103,7 +103,8 @@ class KafkaSource(Source):
 
         ts_start: int = int(os.environ["KAFKA_TIMESTAMP_START"])
         ts_stop: int = int(os.environ["KAFKA_TIMESTAMP_STOP"])
-
+        logging.info(f"timestamp start: {ts_start}")
+        logging.info(f"timestamp stop: {ts_stop}")
         tp_set: Set[TopicPartition] = consumer.assignment()
         tp_ts_dict: Dict[TopicPartition, int] = dict(
             zip(tp_set, [ts_start] * len(tp_set))
