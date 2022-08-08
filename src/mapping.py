@@ -38,7 +38,10 @@ class Mapping:
                     kode67_personer.add(person)
             for msg in batch:
                 kafka_message = json.loads(msg["kafka_message"])
-                if kafka_message[self.target.config["k6-filter"]["col"]] in kode67_personer:
+                if (
+                    kafka_message[self.target.config["k6-filter"]["col"]]
+                    in kode67_personer
+                ):
                     msg["kafka_message"] = None
             self.target.write_batch(list(map(self.transform, batch)))
         with open("/airflow/xcom/return.json", "w") as xcom:

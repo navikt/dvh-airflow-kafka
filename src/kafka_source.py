@@ -112,9 +112,7 @@ class KafkaSource(Source):
         offset_starts: Dict[
             TopicPartition, OffsetAndTimestamp
         ] = consumer.offsets_for_times(tp_ts_dict)
-        offset_ends: Dict[
-            TopicPartition, int
-        ] = consumer.end_offsets(tp_set)
+        offset_ends: Dict[TopicPartition, int] = consumer.end_offsets(tp_set)
 
         tp_done: Set[TopicPartition] = set()
 
@@ -125,7 +123,6 @@ class KafkaSource(Source):
                 tp_done.add(tp)
             else:
                 consumer.seek(tp, offset_and_ts.offset)
-
 
         while True:
             tpd_batch = consumer.poll(
@@ -145,14 +142,16 @@ class KafkaSource(Source):
                     tp_done.add(tp)
 
             batch_filtered = [
-                msg for msg in batch
+                msg
+                for msg in batch
                 if TopicPartition(msg["kafka_topic"], msg["kafka_partition"])
                 not in tp_done
             ]
 
             for msg in batch_filtered:
                 tp = TopicPartition(msg["kafka_topic"], msg["kafka_partition"])
-                if msg["kafka_offset"] == offset_ends.get(tp) - 1: tp_done.add(tp)
+                if msg["kafka_offset"] == offset_ends.get(tp) - 1:
+                    tp_done.add(tp)
 
             if len(batch_filtered) > 0:
                 yield batch_filtered

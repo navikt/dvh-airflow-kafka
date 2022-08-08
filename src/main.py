@@ -14,8 +14,9 @@ from oracle_target import OracleTarget
 logging.basicConfig(
     format='{"msg":"%(message)s", "time":"%(asctime)s", "level":"%(levelname)s"}',
     force=True,
-    level=logging.INFO
+    level=logging.INFO,
 )
+
 
 def run_arguments():
     parser = ArgumentParser()
@@ -26,12 +27,14 @@ def run_arguments():
     else:
         set_secrets_as_envs()
 
+
 def kafka_to_oracle_etl_mapping(config: Text):
     config = yaml.safe_load(stream=config)
     source = KafkaSource(config["source"])
     target = OracleTarget(config["target"])
     transform = Transform(config["transform"])
     return Mapping(source, target, transform)
+
 
 def main() -> None:
     """Main consumer thread"""

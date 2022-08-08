@@ -17,9 +17,8 @@ class OracleTarget(Target):
             password=os.environ["DB_PASSWORD"],
             dsn=os.environ["DB_DSN"],
             encoding="utf-8",
-            nencoding="utf-8"
+            nencoding="utf-8",
         )
-
 
     def get_kode67(self, batch: List[Dict[Text, Any]]) -> List[Tuple]:
         k6_conf = self.config.get("k6-filter")
@@ -31,7 +30,7 @@ class OracleTarget(Target):
             personer = [msg[k6_conf["col"]] for msg in json_batch]
 
             bind_names = [":" + str(i + 1) for i in range(len(personer))]
-            in_bind_names = (",".join(bind_names))
+            in_bind_names = ",".join(bind_names)
             bind_values = dict(zip(bind_names, personer))
             bind_values.update(timestamp_bind_value)
 
@@ -48,7 +47,6 @@ class OracleTarget(Target):
                         return cur.execute(sql, bind_values).fetchall()
         return []
 
-
     def write_batch(self, batch: List[Dict[Text, Any]]) -> None:
         table = self.config["table"]
 
@@ -64,7 +62,6 @@ class OracleTarget(Target):
             if duplicate_column is not None:
                 sql += f""" and not exists ( select null from {table} where 
                 {duplicate_column} = :{duplicate_column} )"""
-
 
         with self._oracle_connection() as con:
             with con.cursor() as cur:
