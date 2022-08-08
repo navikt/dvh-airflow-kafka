@@ -14,6 +14,7 @@ from oracle_target import OracleTarget
 logging.basicConfig(
     format='{"msg":"%(message)s", "time":"%(asctime)s", "level":"%(levelname)s"}',
     force=True,
+    level=logging.INFO
 )
 
 def run_arguments():

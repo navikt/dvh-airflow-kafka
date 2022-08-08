@@ -12,6 +12,6 @@
 
 ## docker
 
-`d build . -t ghcr.io/navikt/dvh-kafka-airflow-consumer:0.2.`
+`d build . -t ghcr.io/navikt/dvh-kafka-airflow-consumer:0.3.`
 
-`d push ghcr.io/navikt/dvh-kafka-airflow-consumer:0.2.`
+`d push ghcr.io/navikt/dvh-kafka-airflow-consumer:0.3.`

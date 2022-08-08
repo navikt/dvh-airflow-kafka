@@ -6,6 +6,7 @@ import struct
 import avro.schema
 import avro.io
 import requests
+import logging
 from typing import Generator, Dict, Text, Any, Tuple, List, Optional, Set
 from kafka import KafkaConsumer
 from kafka.consumer.fetcher import ConsumerRecord, OffsetAndTimestamp
@@ -112,6 +113,8 @@ class KafkaSource(Source):
         ] = consumer.offsets_for_times(tp_ts_dict)
 
         for tp, offset_and_ts in offset_starts.items():
+            logging.info(f"offset start for {tp}: {offset_and_ts}")
+            logging.info(f"end offset for tp: {consumer.end_offsets([tp])}")
             consumer.seek(tp, offset_and_ts.offset)
 
         tp_done: Set[TopicPartition] = set()
