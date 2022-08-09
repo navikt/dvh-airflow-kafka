@@ -156,8 +156,7 @@ class KafkaSource(Source):
             batch_filtered = [
                 msg
                 for msg in batch
-                if TopicPartition(msg["kafka_topic"], msg["kafka_partition"])
-                not in tp_done
+                if msg["kafka_timestamp"] < ts_stop
             ]
 
             for msg in batch_filtered:
