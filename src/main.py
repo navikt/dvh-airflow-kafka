@@ -1,5 +1,4 @@
 import logging
-from threading import local
 import traceback
 import os
 from dataverk_vault.api import set_secrets_as_envs
@@ -11,6 +10,7 @@ from mapping import Mapping
 from transform import Transform
 from kafka_source import KafkaSource
 from oracle_target import OracleTarget
+import environment
 
 logging.basicConfig(
     format='{"msg":"%(message)s", "time":"%(asctime)s", "level":"%(levelname)s"}',
@@ -25,7 +25,7 @@ def run_arguments():
     args = parser.parse_args()
     if args.local:
         load_dotenv("local.env")
-        os.environ["local"] = "true"
+        environment.isNotLocal = False
     else:
         set_secrets_as_envs()
 

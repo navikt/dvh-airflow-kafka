@@ -1,7 +1,7 @@
 from base import Source, Target
 from transform import Transform
 import json
-import os
+import environment
 
 
 class Mapping:
@@ -44,6 +44,6 @@ class Mapping:
                     if kafka_message[k6_conf["col"]] in kode67_personer:
                         msg["kafka_message"] = None
             self.target.write_batch(list(map(self.transform, batch)))
-        if os.environ["local"] != "true":
+        if environment.isNotLocal:
             with open("/airflow/xcom/return.json", "w") as xcom:
                 xcom.write(str(total_messages))

@@ -12,6 +12,7 @@ from kafka import KafkaConsumer
 from kafka.consumer.fetcher import ConsumerRecord, OffsetAndTimestamp
 from kafka.structs import TopicPartition
 from base import Source
+import environment
 
 
 class KafkaSource(Source):
@@ -73,7 +74,7 @@ class KafkaSource(Source):
             key_deserializer=KafkaSource._key_deserializer,
             value_deserializer=value_deserializer,
         )
-        if os.environ["local"] != "true":
+        if environment.isNotLocal:
             config.add(
                 dict(
                     security_protocol="SSL",
