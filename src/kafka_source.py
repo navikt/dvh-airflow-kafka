@@ -162,7 +162,10 @@ class KafkaSource(Source):
 
             for msg in batch_filtered:
                 tp = TopicPartition(msg["kafka_topic"], msg["kafka_partition"])
-                if msg["kafka_offset"] == offset_ends.get(tp) - 1:
+                offset = msg["kafka_offset"]
+                end_offset = offset_ends.get(tp) - 1
+                if offset == end_offset:
+                    logging.info(f"tp: {tp} is done with offset: {offset} and end_offset is {end_offset}")
                     tp_done.add(tp)
 
             if len(batch_filtered) > 0:
