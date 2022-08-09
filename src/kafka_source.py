@@ -75,7 +75,7 @@ class KafkaSource(Source):
             value_deserializer=value_deserializer,
         )
         if environment.isNotLocal:
-            config.add(
+            config.update(
                 dict(
                     security_protocol="SSL",
                     ssl_certfile=os.environ["KAFKA_CERTIFICATE_PATH"],
