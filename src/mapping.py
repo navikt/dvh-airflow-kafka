@@ -1,6 +1,7 @@
 from base import Source, Target
 from transform import Transform
 import json
+import os
 
 
 class Mapping:
@@ -36,13 +37,13 @@ class Mapping:
             for personer in kode67:
                 for person in personer:
                     kode67_personer.add(person)
-            for msg in batch:
-                kafka_message = json.loads(msg["kafka_message"])
-                if (
-                    kafka_message[self.target.config["k6-filter"]["col"]]
-                    in kode67_personer
-                ):
-                    msg["kafka_message"] = None
+            k6_conf = self.target.config.get("k6-filter")
+            if k6_conf:
+                for msg in batch:
+                    kafka_message = json.loads(msg["kafka_message"])
+                    if kafka_message[k6_conf["col"]] in kode67_personer:
+                        msg["kafka_message"] = None
             self.target.write_batch(list(map(self.transform, batch)))
-        with open("/airflow/xcom/return.json", "w") as xcom:
-            xcom.write(str(total_messages))
+        if os.environ["local"] != "true":
+            with open("/airflow/xcom/return.json", "w") as xcom:
+                xcom.write(str(total_messages))

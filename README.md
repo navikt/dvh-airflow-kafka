@@ -1,5 +1,9 @@
 # Airflow image
 
+## Kjøre lokalt
+
+`py src/main -l`
+
 ## kcat
 
 `kcat -b localhost:9092 -t test -C -f '\nKey (%K bytes): %k\t\nValue (%S bytes): %s\nTimestamp: %T\tPartition: %p\tOffset: %o\n--\n'`

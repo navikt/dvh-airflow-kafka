@@ -65,6 +65,25 @@ class KafkaSource(Source):
         kafka_hash = hashlib.sha256(x[5:]).hexdigest()
         return value, kafka_hash
 
+    def _kafka_config(self, value_deserializer):
+        config = dict(
+            auto_offset_reset="earliest",
+            enable_auto_commit=False,
+            bootstrap_servers=os.environ["KAFKA_BROKERS"].split(","),
+            key_deserializer=KafkaSource._key_deserializer,
+            value_deserializer=value_deserializer,
+        )
+        if os.environ["local"] != "true":
+            config.add(
+                dict(
+                    security_protocol="SSL",
+                    ssl_certfile=os.environ["KAFKA_CERTIFICATE_PATH"],
+                    ssl_keyfile=os.environ["KAFKA_PRIVATE_KEY_PATH"],
+                    ssl_cafile=os.environ["KAFKA_CA_PATH"],
+                )
+            )
+        return config
+
     def read_batches(self) -> Generator[List[Dict[Text, Any]], None, None]:
         def collect_message(record: ConsumerRecord) -> Dict[Text, Any]:
             message, hash = record.value
@@ -87,15 +106,7 @@ class KafkaSource(Source):
 
         # kafka.KafkaConsumer
         consumer: KafkaConsumer = KafkaSource.connection_class(
-            security_protocol="SSL",
-            auto_offset_reset="earliest",
-            enable_auto_commit=False,
-            bootstrap_servers=os.environ["KAFKA_BROKERS"].split(","),
-            ssl_certfile=os.environ["KAFKA_CERTIFICATE_PATH"],
-            ssl_keyfile=os.environ["KAFKA_PRIVATE_KEY_PATH"],
-            ssl_cafile=os.environ["KAFKA_CA_PATH"],
-            key_deserializer=KafkaSource._key_deserializer,
-            value_deserializer=value_deserializer,
+            **self._kafka_config(value_deserializer)
         )
         partitions = consumer.partitions_for_topic(self.config["topic"])
         topic_partitions = [TopicPartition(self.config["topic"], p) for p in partitions]
