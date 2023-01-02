@@ -30,7 +30,7 @@ class KafkaSource(Source):
     def _json_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
         dictionary = json.loads(x.decode("UTF-8"))
         kafka_hash = hashlib.sha256(x).hexdigest()
-        dictionary["kafka_message"] = json.dumps(dictionary, default=str, ensure_ascii=False)
+        dictionary["kafka_message"] = json.dumps(dictionary, default=str, ensure_ascii=False).encode("UTF-8")
         return dictionary, kafka_hash
 
     @staticmethod
@@ -150,8 +150,11 @@ class KafkaSource(Source):
                 tp: TopicPartition = TopicPartition(
                     msg["kafka_topic"], msg["kafka_partition"]
                 )
-                if msg["kafka_timestamp"] >= ts_stop:
+                if tp not in tp_done and msg["kafka_timestamp"] >= ts_stop:
                     tp_done.add(tp)
+                    offset = msg["kafka_offset"]
+                    timestamp = msg["kafka_timestamp"]
+                    logging.info(f"TopicPartition: {tp} is done on offset: {offset} with timestamp: {timestamp}")
 
             batch_filtered = [
                 msg
@@ -164,7 +167,7 @@ class KafkaSource(Source):
                 offset = msg["kafka_offset"]
                 end_offset = offset_ends.get(tp) - 1
                 if offset == end_offset:
-                    logging.info(f"tp: {tp} is done with offset: {offset} and end_offset is {end_offset}")
+                    logging.info(f"TopicPartition: {tp} is done on offset: {offset} becaused it's reached end_offset on: {end_offset}")
                     tp_done.add(tp)
 
             if len(batch_filtered) > 0:

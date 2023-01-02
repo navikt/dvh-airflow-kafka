@@ -64,6 +64,6 @@ class OracleTarget(Target):
 
         with self._oracle_connection() as con:
             with con.cursor() as cur:
-                cur.setinputsizes(kafka_message=oracledb.CLOB)
+                cur.setinputsizes(kafka_message=oracledb.BLOB)
                 cur.executemany(sql, batch)
             con.commit()
