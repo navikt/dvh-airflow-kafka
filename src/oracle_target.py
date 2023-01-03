@@ -4,6 +4,7 @@ import oracledb
 from base import Target
 from transform import int_ms_to_date
 import json
+import logging
 
 
 class OracleTarget(Target):
@@ -63,7 +64,16 @@ class OracleTarget(Target):
                 {duplicate_column} = :{duplicate_column} )"""
 
         with self._oracle_connection() as con:
-            with con.cursor() as cur:
-                cur.setinputsizes(kafka_message=oracledb.BLOB)
-                cur.executemany(sql, batch)
-            con.commit()
+            try:
+                with con.cursor() as cur:
+                    cur.setinputsizes(kafka_message=oracledb.BLOB)
+                    cur.executemany(sql, batch)
+                con.commit()
+            except oracledb.DatabaseError as e:
+                error, = e.args
+                logging.error(f"oracle code: {error.code}")
+                logging.error(f"oracle message: {error.message}")
+                logging.error(f"oracle context: {error.context}")
+                logging.error(f"oracle sql statement: {sql}")
+                logging.error(f"oracle insert data: {batch}")
+                raise
