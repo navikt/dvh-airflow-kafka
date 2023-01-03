@@ -129,8 +129,8 @@ class KafkaSource(Source):
         tp_done: Set[TopicPartition] = set()
 
         for tp, offset_and_ts in offset_starts.items():
-            logging.info(f"offset start for {tp}: {offset_and_ts}")
-            logging.info(f"end offset for tp: {offset_ends.get(tp)}")
+            logging.info(f"last offset for {tp}: {offset_ends.get(tp)}")
+            logging.info(f"start consuming on offset for {tp}: {offset_and_ts}")
             if offset_and_ts is None:
                 tp_done.add(tp)
             else:
@@ -167,7 +167,7 @@ class KafkaSource(Source):
                 offset = msg["kafka_offset"]
                 end_offset = offset_ends.get(tp) - 1
                 if offset == end_offset:
-                    logging.info(f"TopicPartition: {tp} is done on offset: {offset} becaused it's reached end_offset on: {end_offset}")
+                    logging.info(f"TopicPartition: {tp} is done on offset: {offset} becaused it's reached end")
                     tp_done.add(tp)
 
             if len(batch_filtered) > 0:
