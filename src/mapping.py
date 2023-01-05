@@ -32,11 +32,7 @@ class Mapping:
         total_messages = 0
         for batch in self.source.read_batches():
             total_messages += len(batch)
-            kode67 = self.target.get_kode67(batch)
-            kode67_personer = set()
-            for personer in kode67:
-                for person in personer:
-                    kode67_personer.add(person)
+            kode67_personer = set(self.target.get_kode67(batch))
             k6_conf = self.target.config.get("k6-filter")
             if k6_conf:
                 for msg in batch:

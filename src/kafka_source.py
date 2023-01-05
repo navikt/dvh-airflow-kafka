@@ -27,10 +27,12 @@ class KafkaSource(Source):
         return x.decode("utf-8")
 
     @staticmethod
-    def _json_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
-        dictionary = json.loads(x.decode("UTF-8"))
-        kafka_hash = hashlib.sha256(x).hexdigest()
-        dictionary["kafka_message"] = json.dumps(dictionary, default=str, ensure_ascii=False).encode("UTF-8")
+    def _json_deserializer(message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
+        message = message_value.decode("UTF-8")
+        dictionary = json.loads(message)
+        kafka_hash = hashlib.sha256(message_value).hexdigest()
+        dictionary["kafka_message"] = message
+        dictionary["kafka_message_bytes"] = message_value
         return dictionary, kafka_hash
 
     @staticmethod
@@ -62,6 +64,7 @@ class KafkaSource(Source):
         decoder = avro.io.BinaryDecoder(reader)
         value = schema_cache[schema_id].read(decoder)
         value["kafka_message"] = json.dumps(value, default=str, ensure_ascii=False)
+        value["kafka_message_bytes"] = value.encode("UTF-8")
         value["kafka_schema_id"] = schema_id
         kafka_hash = hashlib.sha256(x[5:]).hexdigest()
         return value, kafka_hash

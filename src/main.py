@@ -1,7 +1,7 @@
 import logging
 import traceback
 import os
-from dataverk_vault.api import set_secrets_as_envs
+#from dataverk_vault.api import set_secrets_as_envs
 from dotenv import load_dotenv
 from argparse import ArgumentParser
 from typing import Text
@@ -27,8 +27,8 @@ def run_arguments():
     if args.local:
         load_dotenv("local.env")
         environment.isNotLocal = False
-    else:
-        set_secrets_as_envs()
+    #else:
+        #set_secrets_as_envs()
 
 
 def kafka_to_oracle_etl_mapping(config: Text):
