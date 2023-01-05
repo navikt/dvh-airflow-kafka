@@ -21,10 +21,10 @@ class Target:
     def __init__(self, config: Dict[Text, Any]) -> None:
         self.config = config
 
-    def write_batch(self, *args, **kwargs) -> None:
+    def write_batch(self, batch: List[Dict[Text, Any]]) -> None:
         raise NotImplementedError
 
-    def get_kode67(self, *args, **kwargs) -> List[Tuple]:
+    def get_kode67(self, batch: List[Dict[Text, Any]]) -> List[Tuple]:
         raise NotImplementedError
 
     def get_kv_from_config_by_method(self, method):
