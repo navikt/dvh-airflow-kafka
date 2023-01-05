@@ -154,6 +154,7 @@ class KafkaSource(Source):
                     tp_done.add(tp)
                     offset = msg["kafka_offset"]
                     timestamp = msg["kafka_timestamp"]
+                    consumer.pause(tp)
                     logging.info(f"TopicPartition: {tp} is done on offset: {offset} with timestamp: {timestamp}")
 
             batch_filtered = [

@@ -12,10 +12,11 @@ from kafka_source import KafkaSource
 from oracle_target import OracleTarget
 import environment
 
+LOG_LEVEL=os.getenv("LOG_LEVEL", "INFO")
 logging.basicConfig(
     format='{"msg":"%(message)s", "time":"%(asctime)s", "level":"%(levelname)s"}',
     force=True,
-    level=logging.INFO,
+    level=logging.getLevelName(LOG_LEVEL),
 )
 
 
