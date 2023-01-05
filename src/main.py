@@ -24,6 +24,7 @@ logging.basicConfig(
 
 parser = ArgumentParser()
 parser.add_argument("-l", "--local", action="store_true")
+parser.add_argument("-c", "--console", action="store_true")
 args = parser.parse_args()
 if args.local:
     load_dotenv("local.env")
@@ -35,7 +36,7 @@ if args.local:
 def kafka_to_oracle_etl_mapping(config: Text):
     config = yaml.safe_load(stream=config)
     source = KafkaSource(config["source"]) 
-    if args.local: 
+    if args.console: 
         target = console_target(config["target"])
     else:
         target = OracleTarget(config["target"])
