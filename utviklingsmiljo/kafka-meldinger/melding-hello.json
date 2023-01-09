@@ -1,4 +1,7 @@
 {
   "topic":"test",
-  "melding":"Anotherone"
+  "melding":"Anotherone",
+  "person": {
+    "personident": "1234"
+  }
 }

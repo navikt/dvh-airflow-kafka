@@ -1,5 +1,6 @@
 import os
 from typing import Dict, Text, Any, List, Tuple
+from benedict import benedict
 import oracledb
 from base import Target
 from transform import int_ms_to_date
@@ -23,16 +24,18 @@ class OracleTarget(Target):
 
     def get_kode67(self, batch: List[Dict[Text, Any]]) -> List[Tuple]:
         k6_conf = self.config.get("k6-filter")
-        json_batch = [json.loads(msg["kafka_message"]) for msg in batch]
         if k6_conf is not None:
             timestamp_col = k6_conf["timestamp"]
             timestamp = int_ms_to_date(batch[-1][timestamp_col])
             timestamp_bind_value = {timestamp_col: timestamp}
-            personer = [msg[k6_conf["col"]] for msg in json_batch]
+            person_identer = [msg[k6_conf["col"]] for msg in batch]
 
-            bind_names = [":" + str(i + 1) for i in range(len(personer))]
-            in_bind_names = ",".join(bind_names)
-            bind_values = dict(zip(bind_names, personer))
+            # generating sequential sql bind variable names for the range of personidenter i batchen 
+            # example :1,:2,:3 etc 
+            sequential_bind_variable_names = [":" + str(i + 1) for i in range(len(person_identer))]
+            in_bind_names = ",".join(sequential_bind_variable_names)
+
+            bind_values = dict(zip(sequential_bind_variable_names, person_identer))
             bind_values.update(timestamp_bind_value)
 
             sql = f"""
@@ -42,6 +45,7 @@ class OracleTarget(Target):
                 AND TRUNC(:{k6_conf["timestamp"]}) BETWEEN gyldig_fra_dato AND gyldig_til_dato
                 AND skjermet_kode IN(6,7)
             """
+            
             with self._oracle_connection() as con:
                 with con.cursor() as cur:
                     return cur.execute(sql, bind_values).fetchall()
@@ -66,7 +70,7 @@ class OracleTarget(Target):
         with self._oracle_connection() as con:
             try:
                 with con.cursor() as cur:
-                    cur.setinputsizes(kafka_message=oracledb.CLOB)
+                    cur.setinputsizes(kafka_message=oracledb.BLOB)
                     cur.executemany(sql, batch)
                 con.commit()
             except oracledb.DatabaseError as e:

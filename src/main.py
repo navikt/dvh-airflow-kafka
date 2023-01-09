@@ -48,7 +48,7 @@ def main() -> None:
     """Main consumer thread"""
     try:
         #run_arguments()
-        kafka_to_oracle_etl_mapping(os.environ["CONSUMER_CONFIG"]).run_mapping()
+        kafka_to_oracle_etl_mapping(os.environ["CONSUMER_CONFIG"]).run()
     except Exception as ex:
         error_text = ""
         if os.getenv("CONSUMER_LOG_LEVEL") == "debug":

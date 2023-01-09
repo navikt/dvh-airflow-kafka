@@ -20,3 +20,22 @@ CREATE TABLE kafka.raw_isdialogmote (
 ALTER TABLE kafka.raw_isdialogmote
   ADD CONSTRAINT isdialog_json
   CHECK (kafka_message IS JSON);
+
+
+CREATE TABLE kafka.dvh_person_ident_off_id AS (
+  SELECT 
+    1 AS FK_PERSON1 
+    ,'1234' AS OFF_ID
+    ,0 AS SKJERMET_KODE
+    ,TO_DATE('2020-01-01', 'YYYY-MM-DD') AS GYLDIG_FRA_DATO
+    ,TO_DATE('9999-12-31', 'YYYY-MM-DD') AS GYLDIG_TIL_DATO 
+  FROM DUAL
+  UNION  
+  SELECT 
+    6 AS FK_PERSON1 
+    ,'6789' AS OFF_ID
+    ,6 AS SKJERMET_KODE
+    ,TO_DATE('2020-01-01', 'YYYY-MM-DD') AS GYLDIG_FRA_DATO
+    ,TO_DATE('9999-12-31', 'YYYY-MM-DD') AS GYLDIG_TIL_DATO 
+  FROM DUAL 
+);
