@@ -1,7 +1,6 @@
 import logging
 import traceback
 import os
-from dataverk_vault.api import set_secrets_as_envs
 from dotenv import load_dotenv
 from argparse import ArgumentParser
 from typing import Text
@@ -12,6 +11,8 @@ from kafka_source import KafkaSource
 from oracle_target import OracleTarget
 import environment
 from console_target import console_target
+from google.cloud import secretmanager
+import json
 
 LOG_LEVEL=os.getenv("LOG_LEVEL", "INFO")
 logging.basicConfig(
@@ -19,6 +20,23 @@ logging.basicConfig(
     force=True,
     level=logging.getLevelName(LOG_LEVEL),
 )
+
+def set_secrets_as_envs():
+    secrets = secretmanager.SecretManagerServiceClient()
+    resource_name = f"{os.environ['KNADA_TEAM_SECRET']}/versions/latest"
+    secret = secrets.access_secret_version(name=resource_name)
+    secret_str = secret.payload.data.decode('UTF-8')
+    secrets = json.loads(secret_str)
+    os.environ.update(secrets)
+
+    with open(os.getenv('KAFKA_CA_PATH'), 'w') as fil:
+        fil.write(os.getenv('KAFKA_CA'))
+
+    with open(os.getenv('KAFKA_CERTIFICATE_PATH'), 'w') as fil:
+        fil.write(os.getenv('KAFKA_CERTIFICATE'))
+
+    with open(os.getenv('KAFKA_PRIVATE_KEY_PATH'), 'w') as fil:
+        fil.write(os.getenv('KAFKA_PRIVATE_KEY'))
 
 parser = ArgumentParser()
 parser.add_argument("-l", "--local", action="store_true")
@@ -29,7 +47,6 @@ if args.local:
     environment.isNotLocal = False
 else:
     set_secrets_as_envs()
-
 
 def kafka_to_oracle_etl_mapping(config: Text):
     config = yaml.safe_load(stream=config)
