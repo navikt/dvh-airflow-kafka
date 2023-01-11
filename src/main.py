@@ -1,7 +1,7 @@
 import logging
 import traceback
 import os
-from dataverk_vault.api import set_secrets_as_envs
+#from dataverk_vault.api import set_secrets_as_envs
 from dotenv import load_dotenv
 from argparse import ArgumentParser
 from typing import Text
@@ -11,29 +11,35 @@ from transform import Transform
 from kafka_source import KafkaSource
 from oracle_target import OracleTarget
 import environment
+from console_target import console_target
 
+LOG_LEVEL=os.getenv("LOG_LEVEL", "INFO")
 logging.basicConfig(
     format='{"msg":"%(message)s", "time":"%(asctime)s", "level":"%(levelname)s"}',
     force=True,
-    level=logging.INFO,
+    level=logging.getLevelName(LOG_LEVEL),
 )
 
 
-def run_arguments():
-    parser = ArgumentParser()
-    parser.add_argument("-l", "--local", action="store_true")
-    args = parser.parse_args()
-    if args.local:
-        load_dotenv("local.env")
-        environment.isNotLocal = False
-    else:
-        set_secrets_as_envs()
+
+parser = ArgumentParser()
+parser.add_argument("-l", "--local", action="store_true")
+parser.add_argument("-c", "--console", action="store_true")
+args = parser.parse_args()
+if args.local:
+    load_dotenv("local.env")
+    environment.isNotLocal = False
+#else:
+    #set_secrets_as_envs()
 
 
 def kafka_to_oracle_etl_mapping(config: Text):
     config = yaml.safe_load(stream=config)
-    source = KafkaSource(config["source"])
-    target = OracleTarget(config["target"])
+    source = KafkaSource(config["source"]) 
+    if args.console: 
+        target = console_target(config["target"])
+    else:
+        target = OracleTarget(config["target"])
     transform = Transform(config["transform"])
     return Mapping(source, target, transform)
 
@@ -41,8 +47,8 @@ def kafka_to_oracle_etl_mapping(config: Text):
 def main() -> None:
     """Main consumer thread"""
     try:
-        run_arguments()
-        kafka_to_oracle_etl_mapping(os.environ["CONSUMER_CONFIG"]).run_mapping()
+        #run_arguments()
+        kafka_to_oracle_etl_mapping(os.environ["CONSUMER_CONFIG"]).run()
     except Exception as ex:
         error_text = ""
         if os.getenv("CONSUMER_LOG_LEVEL") == "debug":

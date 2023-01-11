@@ -3,7 +3,6 @@ from transform import Transform
 import json
 import environment
 
-
 class Mapping:
     """ETL Mapping Class"""
 
@@ -28,20 +27,15 @@ class Mapping:
         self.transform = transform
         self.total_messages = 0
 
-    def run_mapping(self, once: bool = False) -> None:
+    def run(self) -> None:
         total_messages = 0
         for batch in self.source.read_batches():
             total_messages += len(batch)
-            kode67 = self.target.get_kode67(batch)
-            kode67_personer = set()
-            for personer in kode67:
-                for person in personer:
-                    kode67_personer.add(person)
             k6_conf = self.target.config.get("k6-filter")
             if k6_conf:
+                kode67_personer = set(*zip(*self.target.get_kode67(batch)))
                 for msg in batch:
-                    kafka_message = json.loads(msg["kafka_message"])
-                    if kafka_message[k6_conf["col"]] in kode67_personer:
+                    if msg[k6_conf["col"]] in kode67_personer:
                         msg["kafka_message"] = None
             self.target.write_batch(list(map(self.transform, batch)))
         if environment.isNotLocal:

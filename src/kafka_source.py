@@ -5,6 +5,7 @@ import os
 import struct
 import avro.schema
 import avro.io
+from benedict import benedict
 import requests
 import logging
 from typing import Generator, Dict, Text, Any, Tuple, List, Optional, Set
@@ -18,28 +19,37 @@ import environment
 class KafkaSource(Source):
     """Kafka Airflow Source"""
 
+    def __init__(self, config: Dict[Text, Any]) -> None:
+        super().__init__(config)
+        self.data_interval_start: int = int(os.environ["DATA_INTERVAL_START"])
+        self.data_interval_end: int = int(os.environ["DATA_INTERVAL_END"])
+
+
     connection_class = KafkaConsumer
 
-    @staticmethod
     def _key_deserializer(x: Optional[bytes]) -> Text:
         if x is None:
             return ""
         return x.decode("utf-8")
 
-    @staticmethod
-    def _json_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
-        dictionary = json.loads(x.decode("UTF-8"))
-        kafka_hash = hashlib.sha256(x).hexdigest()
-        dictionary["kafka_message"] = json.dumps(dictionary, default=str, ensure_ascii=False).encode("UTF-8")
+    def _json_deserializer(self, message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
+        message = message_value.decode("UTF-8")
+        dictionary = benedict(json.loads(message))
+        filter_config = self.config.get("message-fields-filter")
+        if filter_config is not None:
+            dictionary.remove(filter_config)
+        kafka_hash = hashlib.sha256(message_value).hexdigest()
+        dictionary["kafka_message"] = json.dumps(dictionary, ensure_ascii=True).encode("UTF-8")
+        #Kanskje implementeres hvis vi finner en måte å gjøre den optional og vi
+        #får problemer med at kafka_message er bytes
+        #dictionary["kafka_message_bytes"] = message_value
         return dictionary, kafka_hash
 
-    @staticmethod
     def _string_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
         dictionary = dict(kafka_message=json.dumps(x.decode("UTF-8"), default=str, ensure_ascii=False))
         kafka_hash = hashlib.sha256(x).hexdigest()
         return dictionary, kafka_hash
 
-    @staticmethod
     def _avro_deserializer(
         x: bytes, schema_cache=dict()
     ) -> Tuple[Dict[Text, Any], Text]:
@@ -61,7 +71,9 @@ class KafkaSource(Source):
         reader = io.BytesIO(x[5:])
         decoder = avro.io.BinaryDecoder(reader)
         value = schema_cache[schema_id].read(decoder)
-        value["kafka_message"] = json.dumps(value, default=str, ensure_ascii=False)
+        value["kafka_message"] = value.encode("UTF-8")
+        #value["kafka_message"] = json.dumps(value, default=str, ensure_ascii=False)
+        #value["kafka_message_bytes"] = value.encode("UTF-8")
         value["kafka_schema_id"] = schema_id
         kafka_hash = hashlib.sha256(x[5:]).hexdigest()
         return value, kafka_hash
@@ -97,43 +109,38 @@ class KafkaSource(Source):
             return message
 
         if self.config["schema"] == "avro":
-            value_deserializer = KafkaSource._avro_deserializer
+            value_deserializer = self._avro_deserializer
         elif self.config["schema"] == "json":
-            value_deserializer = KafkaSource._json_deserializer
+            value_deserializer = self._json_deserializer
         elif self.config["schema"] == "string":
-            value_deserializer = KafkaSource._string_deserializer
+            value_deserializer = self._string_deserializer
         else:
             raise AssertionError
 
-        # kafka.KafkaConsumer
+        logging.info(f"data_interval_start: {self.data_interval_start}")
+        logging.info(f"data_interval_stop: {self.data_interval_end}") 
+
         consumer: KafkaConsumer = KafkaSource.connection_class(
             **self._kafka_config(value_deserializer)
         )
         partitions = consumer.partitions_for_topic(self.config["topic"])
-        topic_partitions = [TopicPartition(self.config["topic"], p) for p in partitions]
+        topic_partitions = {TopicPartition(self.config["topic"], p) for p in partitions}
         consumer.assign(topic_partitions)
 
-        ts_start: int = int(os.environ["KAFKA_TIMESTAMP_START"])
-        ts_stop: int = int(os.environ["KAFKA_TIMESTAMP_STOP"])
-        logging.info(f"timestamp start: {ts_start}")
-        logging.info(f"timestamp stop: {ts_stop}")
-        tp_set: Set[TopicPartition] = consumer.assignment()
         tp_ts_dict: Dict[TopicPartition, int] = dict(
-            zip(tp_set, [ts_start] * len(tp_set))
+            zip(topic_partitions, [self.data_interval_start] * len(topic_partitions))
         )
         offset_starts: Dict[
             TopicPartition, OffsetAndTimestamp
         ] = consumer.offsets_for_times(tp_ts_dict)
-        offset_ends: Dict[TopicPartition, int] = consumer.end_offsets(tp_set)
-
         tp_done: Set[TopicPartition] = set()
-
+        offset_ends: Dict[TopicPartition, int] = consumer.end_offsets(topic_partitions)
         for tp, offset_and_ts in offset_starts.items():
             logging.info(f"last offset for {tp}: {offset_ends.get(tp)}")
-            logging.info(f"start consuming on offset for {tp}: {offset_and_ts}")
             if offset_and_ts is None:
                 tp_done.add(tp)
             else:
+                logging.info(f"start consuming on offset for {tp}: {offset_and_ts}")
                 consumer.seek(tp, offset_and_ts.offset)
 
         while True:
@@ -150,28 +157,25 @@ class KafkaSource(Source):
                 tp: TopicPartition = TopicPartition(
                     msg["kafka_topic"], msg["kafka_partition"]
                 )
-                if tp not in tp_done and msg["kafka_timestamp"] >= ts_stop:
-                    tp_done.add(tp)
-                    offset = msg["kafka_offset"]
-                    timestamp = msg["kafka_timestamp"]
-                    logging.info(f"TopicPartition: {tp} is done on offset: {offset} with timestamp: {timestamp}")
-
-            batch_filtered = [
-                msg
-                for msg in batch
-                if msg["kafka_timestamp"] < ts_stop
-            ]
-
-            for msg in batch_filtered:
-                tp = TopicPartition(msg["kafka_topic"], msg["kafka_partition"])
                 offset = msg["kafka_offset"]
                 end_offset = offset_ends.get(tp) - 1
+                if tp not in tp_done and msg["kafka_timestamp"] >= self.data_interval_end:
+                    tp_done.add(tp)
+                    consumer.pause(tp)
+                    timestamp = msg["kafka_timestamp"]
+                    logging.info(f"TopicPartition: {tp} is done on offset: {offset} with timestamp: {timestamp}")
                 if offset == end_offset:
                     logging.info(f"TopicPartition: {tp} is done on offset: {offset} becaused it's reached end")
                     tp_done.add(tp)
 
+            batch_filtered = [
+                msg
+                for msg in batch
+                if msg["kafka_timestamp"] < self.data_interval_end
+            ]
+
             if len(batch_filtered) > 0:
                 yield batch_filtered
 
-            if tp_done == tp_set:
+            if tp_done == topic_partitions:
                 break
