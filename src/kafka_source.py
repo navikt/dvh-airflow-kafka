@@ -27,30 +27,29 @@ class KafkaSource(Source):
 
     connection_class = KafkaConsumer
 
-    @staticmethod
     def _key_deserializer(x: Optional[bytes]) -> Text:
         if x is None:
             return ""
         return x.decode("utf-8")
 
-    @staticmethod
-    def _json_deserializer(message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
+    def _json_deserializer(self, message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
         message = message_value.decode("UTF-8")
         dictionary = benedict(json.loads(message))
+        filter_config = self.config.get("message-fields-filter")
+        if filter_config is not None:
+            dictionary.remove(filter_config)
         kafka_hash = hashlib.sha256(message_value).hexdigest()
-        dictionary["kafka_message"] = message_value
+        dictionary["kafka_message"] = json.dumps(dictionary, ensure_ascii=True).encode("UTF-8")
         #Kanskje implementeres hvis vi finner en måte å gjøre den optional og vi
         #får problemer med at kafka_message er bytes
         #dictionary["kafka_message_bytes"] = message_value
         return dictionary, kafka_hash
 
-    @staticmethod
     def _string_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
         dictionary = dict(kafka_message=json.dumps(x.decode("UTF-8"), default=str, ensure_ascii=False))
         kafka_hash = hashlib.sha256(x).hexdigest()
         return dictionary, kafka_hash
 
-    @staticmethod
     def _avro_deserializer(
         x: bytes, schema_cache=dict()
     ) -> Tuple[Dict[Text, Any], Text]:
@@ -110,11 +109,11 @@ class KafkaSource(Source):
             return message
 
         if self.config["schema"] == "avro":
-            value_deserializer = KafkaSource._avro_deserializer
+            value_deserializer = self._avro_deserializer
         elif self.config["schema"] == "json":
-            value_deserializer = KafkaSource._json_deserializer
+            value_deserializer = self._json_deserializer
         elif self.config["schema"] == "string":
-            value_deserializer = KafkaSource._string_deserializer
+            value_deserializer = self._string_deserializer
         else:
             raise AssertionError
 
