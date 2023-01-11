@@ -27,7 +27,6 @@ class OracleTarget(Target):
         if k6_conf is not None:
             timestamp_col = k6_conf["timestamp"]
             timestamp = int_ms_to_date(batch[-1][timestamp_col])
-            timestamp_bind_value = {timestamp_col: timestamp}
             person_identer = [msg[k6_conf["col"]] for msg in batch]
 
             # generating sequential sql bind variable names for the range of personidenter i batchen 
@@ -36,16 +35,16 @@ class OracleTarget(Target):
             in_bind_names = ",".join(sequential_bind_variable_names)
 
             bind_values = dict(zip(sequential_bind_variable_names, person_identer))
-            bind_values.update(timestamp_bind_value)
+            bind_values.update({"timestamp": timestamp})
 
             sql = f"""
                 SELECT {k6_conf["filter-col"]}
                 FROM {k6_conf["filter-table"]}
                 WHERE {k6_conf["filter-col"]} IN ({in_bind_names})
-                AND TRUNC(:{k6_conf["timestamp"]}) BETWEEN gyldig_fra_dato AND gyldig_til_dato
+                AND TRUNC(:timestamp) BETWEEN gyldig_fra_dato AND gyldig_til_dato
                 AND skjermet_kode IN(6,7)
             """
-            
+
             with self._oracle_connection() as con:
                 with con.cursor() as cur:
                     return cur.execute(sql, bind_values).fetchall()
