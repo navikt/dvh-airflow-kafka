@@ -3,6 +3,7 @@ from transform import Transform
 import json
 import environment
 
+
 class Mapping:
     """ETL Mapping Class"""
 

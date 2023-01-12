@@ -13,7 +13,7 @@ from oracle_target import OracleTarget
 import environment
 from console_target import console_target
 
-LOG_LEVEL=os.getenv("LOG_LEVEL", "INFO")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 logging.basicConfig(
     format='{"msg":"%(message)s", "time":"%(asctime)s", "level":"%(levelname)s"}',
     force=True,
@@ -33,8 +33,8 @@ else:
 
 def kafka_to_oracle_etl_mapping(config: Text):
     config = yaml.safe_load(stream=config)
-    source = KafkaSource(config["source"]) 
-    if args.console: 
+    source = KafkaSource(config["source"])
+    if args.console:
         target = console_target(config["target"])
     else:
         target = OracleTarget(config["target"])
@@ -45,7 +45,7 @@ def kafka_to_oracle_etl_mapping(config: Text):
 def main() -> None:
     """Main consumer thread"""
     try:
-        #run_arguments()
+        # run_arguments()
         kafka_to_oracle_etl_mapping(os.environ["CONSUMER_CONFIG"]).run()
     except Exception as ex:
         error_text = ""
