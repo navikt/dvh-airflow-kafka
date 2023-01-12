@@ -39,6 +39,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: "${{ IMAGE }}"
+          tags: $IMAGE 
           cache-from: type=gha
           cache-to: type=gha,mode=ma
