@@ -11,6 +11,8 @@ import logging
 class OracleTarget(Target):
     """Oracle Target"""
 
+    oracledb.init_oracle_client()
+
     connection_class = oracledb.connect
 
     def _oracle_connection(self) -> oracledb.connect:
@@ -71,7 +73,7 @@ class OracleTarget(Target):
         with self._oracle_connection() as con:
             try:
                 with con.cursor() as cur:
-                    cur.setinputsizes(kafka_message=oracledb.BLOB)
+                    cur.setinputsizes(**self.get_kv_from_config_by_method('cx_Oracle.Cursor.setinputsizes'))
                     cur.executemany(sql, batch)
                 con.commit()
             except oracledb.DatabaseError as e:
