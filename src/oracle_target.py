@@ -75,6 +75,7 @@ class OracleTarget(Target):
         with self._oracle_connection() as con:
             try:
                 with con.cursor() as cur:
+                    logging.debug(f"oracledb.is_thin_mode(): {oracledb.is_thin_mode()}")
                     cur.setinputsizes(
                         **self.get_kv_from_config_by_method(
                             "cx_Oracle.Cursor.setinputsizes"
