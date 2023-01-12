@@ -14,12 +14,6 @@ from console_target import console_target
 from google.cloud import secretmanager
 import json
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-logging.basicConfig(
-    format='{"msg":"%(message)s", "time":"%(asctime)s", "level":"%(levelname)s"}',
-    force=True,
-    level=logging.getLevelName(LOG_LEVEL),
-)
 
 def set_secrets_as_envs():
     secrets = secretmanager.SecretManagerServiceClient()
@@ -47,6 +41,14 @@ if args.local:
     environment.isNotLocal = False
 else:
     set_secrets_as_envs()
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+logging.basicConfig(
+    format='{"msg":"%(message)s", "time":"%(asctime)s", "level":"%(levelname)s"}',
+    force=True,
+    level=logging.getLevelName(LOG_LEVEL),
+)
+
 
 def kafka_to_oracle_etl_mapping(config: Text):
     config = yaml.safe_load(stream=config)

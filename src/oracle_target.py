@@ -75,11 +75,8 @@ class OracleTarget(Target):
         with self._oracle_connection() as con:
             try:
                 with con.cursor() as cur:
-                    cur.setinputsizes(
-                        **self.get_kv_from_config_by_method(
-                            "cx_Oracle.Cursor.setinputsizes"
-                        )
-                    )
+                    logging.debug(f"oracledb.is_thin_mode(): {con.thin}")
+                    cur.setinputsizes(kafka_message=oracledb.BLOB)
                     cur.executemany(sql, batch)
                 con.commit()
             except oracledb.DatabaseError as e:

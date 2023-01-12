@@ -54,7 +54,7 @@ class KafkaSource(Source):
         return dictionary, kafka_hash
 
     def _avro_deserializer(
-        x: bytes, schema_cache=dict()
+        self, x: bytes, schema_cache=dict()
     ) -> Tuple[Dict[Text, Any], Text]:
         schema_id = struct.unpack(">L", x[1:5])[
             0
@@ -75,6 +75,10 @@ class KafkaSource(Source):
         decoder = avro.io.BinaryDecoder(reader)
         value = schema_cache[schema_id].read(decoder)
         value["kafka_message"] = value.encode("UTF-8")
+        value = benedict(value)
+        filter_config = self.config.get("message-fields-filter")
+        if filter_config is not None:
+            value.remove(filter_config)
         # value["kafka_message"] = json.dumps(value, default=str, ensure_ascii=False)
         # value["kafka_message_bytes"] = value.encode("UTF-8")
         value["kafka_schema_id"] = schema_id
