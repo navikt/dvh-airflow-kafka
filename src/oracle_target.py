@@ -11,6 +11,8 @@ import logging
 class OracleTarget(Target):
     """Oracle Target"""
 
+    oracledb.init_oracle_client()
+
     connection_class = oracledb.connect
 
     def _oracle_connection(self) -> oracledb.connect:
@@ -29,9 +31,11 @@ class OracleTarget(Target):
             timestamp = int_ms_to_date(batch[-1][timestamp_col])
             person_identer = [msg[k6_conf["col"]] for msg in batch]
 
-            # generating sequential sql bind variable names for the range of personidenter i batchen 
-            # example :1,:2,:3 etc 
-            sequential_bind_variable_names = [":" + str(i + 1) for i in range(len(person_identer))]
+            # generating sequential sql bind variable names for the range of personidenter i batchen
+            # example :1,:2,:3 etc
+            sequential_bind_variable_names = [
+                ":" + str(i + 1) for i in range(len(person_identer))
+            ]
             in_bind_names = ",".join(sequential_bind_variable_names)
 
             bind_values = dict(zip(sequential_bind_variable_names, person_identer))
@@ -71,11 +75,15 @@ class OracleTarget(Target):
         with self._oracle_connection() as con:
             try:
                 with con.cursor() as cur:
-                    cur.setinputsizes(kafka_message=oracledb.BLOB)
+                    cur.setinputsizes(
+                        **self.get_kv_from_config_by_method(
+                            "cx_Oracle.Cursor.setinputsizes"
+                        )
+                    )
                     cur.executemany(sql, batch)
                 con.commit()
             except oracledb.DatabaseError as e:
-                error, = e.args
+                (error,) = e.args
                 logging.error(f"oracle code: {error.code}")
                 logging.error(f"oracle message: {error.message}")
                 logging.error(f"oracle context: {error.context}")
