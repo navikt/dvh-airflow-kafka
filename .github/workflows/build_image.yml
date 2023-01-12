@@ -9,7 +9,10 @@ on:
 
 env:
   IMAGE_NAME: dvh-airflow-kafka
-
+jobs:
+  "build":
+    name: "build"
+    runs-on: "ubuntu-18.04"
     steps:
       - uses: actions/checkout@v3.0.2
 
