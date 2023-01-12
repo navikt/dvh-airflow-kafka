@@ -13,12 +13,6 @@ from oracle_target import OracleTarget
 import environment
 from console_target import console_target
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-logging.basicConfig(
-    format='{"msg":"%(message)s", "time":"%(asctime)s", "level":"%(levelname)s"}',
-    force=True,
-    level=logging.getLevelName(LOG_LEVEL),
-)
 
 parser = ArgumentParser()
 parser.add_argument("-l", "--local", action="store_true")
@@ -29,6 +23,13 @@ if args.local:
     environment.isNotLocal = False
 else:
     set_secrets_as_envs()
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+logging.basicConfig(
+    format='{"msg":"%(message)s", "time":"%(asctime)s", "level":"%(levelname)s"}',
+    force=True,
+    level=logging.getLevelName(LOG_LEVEL),
+)
 
 
 def kafka_to_oracle_etl_mapping(config: Text):
