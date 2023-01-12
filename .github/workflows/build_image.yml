@@ -1,0 +1,30 @@
+# github actions
+name: Publish to ghcr
+
+on:
+  push:
+    branches:
+      - master
+      - gcp
+
+env:
+  IMAGE_NAME: dvh-airflow-kafka
+
+    steps:
+      - uses: actions/checkout@v3.0.2
+
+      - name: "Add sha to environment variable"
+        env:
+          FULL_SHA: "${{github.sha}}"
+        run: |
+          sha=$(echo $FULL_SHA | cut -c1-7)
+          echo "IMAGE=$IMAGE_NAME:$sha" >> $GITHUB_ENV
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: "$IMAGE"
+          cache-from: type=gha
+          cache-to: type=gha,mode=ma
