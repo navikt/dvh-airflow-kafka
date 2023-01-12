@@ -8,7 +8,7 @@ on:
       - gcp
 
 env:
-  IMAGE_NAME: dvh-airflow-kafka
+  IMAGE_NAME: "ghcr.io/${{ github.repository }}"
 jobs:
   "build":
     name: "build"
