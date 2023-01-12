@@ -19,11 +19,17 @@ jobs:
       - name: "Add sha to environment variable"
         env:
           FULL_SHA: "${{github.sha}}"
+          BRANCH: "${{github.ref}}"
         run: |
           sha=$(echo $FULL_SHA | cut -c1-7)
-          echo "IMAGE=$IMAGE_NAME:$sha" >> $GITHUB_ENV
+          if [ $BRANCH = refs/heads/master ]
+          then
+              echo "IMAGE=$IMAGE_NAME:$sha" >> $GITHUB_ENV
+          elif [ $BRANCH = refs/heads/gcp ]
+          then
+              echo "IMAGE=$IMAGE_NAME-gcp:$sha" >> $GITHUB_ENV
+          fi
 
- 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
