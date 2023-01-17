@@ -34,7 +34,7 @@ class KafkaSource(Source):
     def _json_deserializer(self, message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
         message = message_value.decode("UTF-8")
         dictionary = benedict(json.loads(message), keypath_separator='.')
-        separator = self.config.get("nivaa-separator")
+        separator = self.config.get("keypath-seperator")
         if separator is not None:
             dictionary.keypath_separator = separator
         filter_config = self.config.get("message-fields-filter")
@@ -79,7 +79,7 @@ class KafkaSource(Source):
         value = schema_cache[schema_id].read(decoder)
         value["kafka_message"] = value.encode("UTF-8")
         value = benedict(value, keypath_separator='.')
-        separator = self.config.get("nivaa-separator")
+        separator = self.config.get("keypath-seperator")
         if separator is not None:
             value.keypath_separator = separator
         filter_config = self.config.get("message-fields-filter")
