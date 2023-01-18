@@ -1,6 +1,7 @@
 {
   "topic":"test",
   "melding":"k67_melding",
+  "6.4": "hello",
   "person": {
     "personident": "6789"
   }

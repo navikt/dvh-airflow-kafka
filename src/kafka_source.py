@@ -33,10 +33,10 @@ class KafkaSource(Source):
 
     def _json_deserializer(self, message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
         message = message_value.decode("UTF-8")
-        dictionary = benedict(json.loads(message), keypath_separator='.')
+        dictionary = benedict(json.loads(message), keypath_separator=None)
         separator = self.config.get("keypath-seperator")
         if separator is not None:
-            dictionary.keypath_separator = separator
+            dictionary.keypath_separator = separator      
         filter_config = self.config.get("message-fields-filter")
         if filter_config is not None:
             dictionary.remove(filter_config)
@@ -78,7 +78,7 @@ class KafkaSource(Source):
         decoder = avro.io.BinaryDecoder(reader)
         value = schema_cache[schema_id].read(decoder)
         value["kafka_message"] = value.encode("UTF-8")
-        value = benedict(value, keypath_separator='.')
+        value = benedict(value, keypath_separator=None)
         separator = self.config.get("keypath-seperator")
         if separator is not None:
             value.keypath_separator = separator
