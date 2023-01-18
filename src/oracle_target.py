@@ -1,7 +1,6 @@
 import os
 from typing import Dict, Text, Any, List, Tuple
 import oracledb
-import cx_Oracle
 from base import Target
 from transform import int_ms_to_date
 import json
