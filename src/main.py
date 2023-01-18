@@ -24,12 +24,15 @@ def set_secrets_as_envs():
     secrets = json.loads(secret_str)
     os.environ.update(secrets)
 
+    os.environ['KAFKA_CA_PATH'] = './kafka_ca_file'
     with open(os.getenv('KAFKA_CA_PATH'), 'w') as fil:
         fil.write(os.getenv('KAFKA_CA'))
 
+    os.environ['KAFKA_CERTIFICATE_PATH'] = './kafka_certificate_file'
     with open(os.getenv('KAFKA_CERTIFICATE_PATH'), 'w') as fil:
         fil.write(os.getenv('KAFKA_CERTIFICATE'))
 
+    os.environ['KAFKA_PRIVATE_KEY_PATH'] = './kafka_private_key_file'
     with open(os.getenv('KAFKA_PRIVATE_KEY_PATH'), 'w') as fil:
         fil.write(os.getenv('KAFKA_PRIVATE_KEY'))
 
