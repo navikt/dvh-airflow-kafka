@@ -6,6 +6,7 @@ on:
     branches:
       - master
       - gcp
+      - gcp-dv-a-team
 
 env:
   IMAGE_NAME: "ghcr.io/${{ github.repository }}"
@@ -28,6 +29,9 @@ jobs:
           elif [ $BRANCH = refs/heads/gcp ]
           then
               echo "IMAGE=$IMAGE_NAME-gcp:$sha" >> $GITHUB_ENV
+          elif [ $BRANCH = refs/heads/gcp-dv-a-team ]
+          then
+              echo "IMAGE=$IMAGE_NAME-gcp-dv-a-team:$sha" >> $GITHUB_ENV
           fi
 
       - name: Set up Docker Buildx
@@ -45,6 +49,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.IMAGE }} 
+          tags: ${{ env.IMAGE }}
           cache-from: type=gha
           cache-to: type=gha,mode=ma

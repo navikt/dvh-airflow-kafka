@@ -16,8 +16,9 @@ import json
 
 
 def set_secrets_as_envs():
+    resource_name = os.environ.get(
+        'PROJECT_SECRET_PATH') or f"{os.environ['KNADA_TEAM_SECRET']}/versions/latest"
     secrets = secretmanager.SecretManagerServiceClient()
-    resource_name = f"{os.environ['KNADA_TEAM_SECRET']}/versions/latest"
     secret = secrets.access_secret_version(name=resource_name)
     secret_str = secret.payload.data.decode('UTF-8')
     secrets = json.loads(secret_str)
@@ -32,9 +33,11 @@ def set_secrets_as_envs():
     with open(os.getenv('KAFKA_PRIVATE_KEY_PATH'), 'w') as fil:
         fil.write(os.getenv('KAFKA_PRIVATE_KEY'))
 
+
 parser = ArgumentParser()
 parser.add_argument("-l", "--local", action="store_true")
 parser.add_argument("-c", "--console", action="store_true")
+
 args = parser.parse_args()
 if args.local:
     load_dotenv("local.env")
