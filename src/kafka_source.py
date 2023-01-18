@@ -51,7 +51,8 @@ class KafkaSource(Source):
 
     def _string_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
         dictionary = dict(
-            kafka_message=json.dumps(x.decode("UTF-8"), default=str, ensure_ascii=False)
+            kafka_message=json.dumps(
+                x.decode("UTF-8"), default=str, ensure_ascii=False)
         )
         kafka_hash = hashlib.sha256(x).hexdigest()
         return dictionary, kafka_hash
@@ -77,7 +78,7 @@ class KafkaSource(Source):
         reader = io.BytesIO(x[5:])
         decoder = avro.io.BinaryDecoder(reader)
         value = schema_cache[schema_id].read(decoder)
-        value["kafka_message"] = value.encode("UTF-8")
+        # value["kafka_message"] = value.encode("UTF-8")
         value = benedict(value)
         separator = self.config.get("keypath-seperator")
         if separator is not None:
@@ -85,7 +86,8 @@ class KafkaSource(Source):
         filter_config = self.config.get("message-fields-filter")
         if filter_config is not None:
             value.remove(filter_config)
-        # value["kafka_message"] = json.dumps(value, default=str, ensure_ascii=False)
+        value["kafka_message"] = json.dumps(
+            value, default=str, ensure_ascii=False)
         # value["kafka_message_bytes"] = value.encode("UTF-8")
         value["kafka_schema_id"] = schema_id
         kafka_hash = hashlib.sha256(x[5:]).hexdigest()
@@ -137,23 +139,27 @@ class KafkaSource(Source):
             **self._kafka_config(value_deserializer)
         )
         partitions = consumer.partitions_for_topic(self.config["topic"])
-        topic_partitions = {TopicPartition(self.config["topic"], p) for p in partitions}
+        topic_partitions = {TopicPartition(
+            self.config["topic"], p) for p in partitions}
         consumer.assign(topic_partitions)
 
         tp_ts_dict: Dict[TopicPartition, int] = dict(
-            zip(topic_partitions, [self.data_interval_start] * len(topic_partitions))
+            zip(topic_partitions, [
+                self.data_interval_start] * len(topic_partitions))
         )
         offset_starts: Dict[
             TopicPartition, OffsetAndTimestamp
         ] = consumer.offsets_for_times(tp_ts_dict)
         tp_done: Set[TopicPartition] = set()
-        offset_ends: Dict[TopicPartition, int] = consumer.end_offsets(topic_partitions)
+        offset_ends: Dict[TopicPartition,
+                          int] = consumer.end_offsets(topic_partitions)
         for tp, offset_and_ts in offset_starts.items():
             logging.info(f"last offset for {tp}: {offset_ends.get(tp)}")
             if offset_and_ts is None:
                 tp_done.add(tp)
             else:
-                logging.info(f"start consuming on offset for {tp}: {offset_and_ts}")
+                logging.info(
+                    f"start consuming on offset for {tp}: {offset_and_ts}")
                 consumer.seek(tp, offset_and_ts.offset)
 
         while True:
