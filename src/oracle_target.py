@@ -67,11 +67,8 @@ class OracleTarget(Target):
 
             duplicate_column = self.config.get("skip-duplicates-with")
             if duplicate_column is not None:
-                duplicate_columns = [
-                    f"{item}=:{item}" for item in duplicate_column]
-                bind_duplicate_column_names = " and ".join(duplicate_columns)
                 sql += f""" and not exists ( select null from {table} where 
-                {bind_duplicate_column_names} )"""
+                {duplicate_column} = :{duplicate_column} )"""
 
         with self._oracle_connection() as con:
             try:
