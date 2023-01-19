@@ -34,7 +34,7 @@ class KafkaSource(Source):
     def _json_deserializer(self, message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
         #message = json.loads(message_value.decode("UTF-8"))
         if message_value is None:
-            print("Her er meldinger som feiler: ", message_value)
+            logging.info(f"Her er meldinger som feiler: {message_value}")
         else:
             message = message_value.decode("UTF-8")
         dictionary = benedict(message, keypath_separator=None)
