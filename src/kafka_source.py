@@ -32,8 +32,12 @@ class KafkaSource(Source):
         return x.decode("utf-8")
 
     def _json_deserializer(self, message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
-        message = message_value.decode("UTF-8")
-        dictionary = benedict(json.loads(message), keypath_separator=None)
+        #message = json.loads(message_value.decode("UTF-8"))
+        if message_value is None:
+            print("Her er meldinger som feiler: ", message_value)
+        else:
+            message = message_value.decode("UTF-8")
+        dictionary = benedict(message, keypath_separator=None)
         separator = self.config.get("keypath-seperator")
         if separator is not None:
             dictionary.keypath_separator = separator      
@@ -41,9 +45,8 @@ class KafkaSource(Source):
         if filter_config is not None:
             dictionary.remove(filter_config)
         kafka_hash = hashlib.sha256(message_value).hexdigest()
-        dictionary["kafka_message"] = json.dumps(dictionary, ensure_ascii=True).encode(
-            "UTF-8"
-        )
+        dictionary["kafka_message"] = json.dumps(dictionary, ensure_ascii=True).encode("UTF-8")
+
         # Kanskje implementeres hvis vi finner en måte å gjøre den optional og vi
         # får problemer med at kafka_message er bytes
         # dictionary["kafka_message_bytes"] = message_value
