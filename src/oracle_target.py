@@ -96,7 +96,7 @@ def kafkaMetadata(batch):
             Parameters:
                     batch (List[Dict[Text, Any]]): A batch of kafka data
     '''
-    header = [header for header in batch[0].keys() if "kafka_" in header]
+    header = [header for header in batch[0].keys() if "message" not in header]
     header_str = ''.join([f"{key:>15}" for key in header])
     log_list = [header_str]
     for row in batch:
