@@ -173,6 +173,8 @@ class KafkaSource(Source):
             ]
 
             for msg in batch:
+                if(msg["kafka_offset"] % 500 == 0):
+                    logging.info(f'Current kafka_offset: {msg["kafka_offset"]}')
                 tp: TopicPartition = TopicPartition(
                     msg["kafka_topic"], msg["kafka_partition"]
                 )
