@@ -63,7 +63,7 @@ class OracleTarget(Target):
                 sql = f.read()
         else:
             columns = list(batch[0].keys())
-            sql = f"insert into {table} ({','.join(columns)}) select :{',:'.join(columns)} from dual where 1=1"
+            sql = f"insert into {table} ({','.join(columns)}, lastet_dato) select :{',:'.join(columns)}, sysdate from dual where 1=1"
 
             duplicate_column = self.config.get("skip-duplicates-with")
             if duplicate_column is not None:
