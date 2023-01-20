@@ -97,10 +97,10 @@ def kafkaMetadata(batch):
                     batch (List[Dict[Text, Any]]): A batch of kafka data
     '''
     header = [header for header in batch[0].keys() if "message" not in header]
-    header_str = ''.join([f"{key:>15}" for key in header])
+    header_str = ''.join([f"{key:>30}" for key in header])
     log_list = [header_str]
     for row in batch:
-        row_str = ''.join([f"{row[key]:>15}" for key in header])
+        row_str = ''.join([f"{row[key]:>30}" for key in header])
         log_list.append(row_str)
     log_str = '\n'.join(log_list)
     return log_str
