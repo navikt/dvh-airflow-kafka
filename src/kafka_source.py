@@ -32,25 +32,22 @@ class KafkaSource(Source):
         return x.decode("utf-8")
 
     def _json_deserializer(self, message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
-        #message = json.loads(message_value.decode("UTF-8"))
         if message_value is None:
-            logging.info(f"Her er meldinger som feiler: {message_value}")
-        else:
-            message = message_value.decode("UTF-8")
+            return benedict(dict(kafka_hash=None, kafka_message=None))
+        message = json.loads(message_value.decode("UTF-8"))
         dictionary = benedict(message, keypath_separator=None)
         separator = self.config.get("keypath-seperator")
         if separator is not None:
-            dictionary.keypath_separator = separator      
+            dictionary.keypath_separator = separator
         filter_config = self.config.get("message-fields-filter")
         if filter_config is not None:
             dictionary.remove(filter_config)
         kafka_hash = hashlib.sha256(message_value).hexdigest()
-        dictionary["kafka_message"] = json.dumps(dictionary, ensure_ascii=True).encode("UTF-8")
-
-        # Kanskje implementeres hvis vi finner en måte å gjøre den optional og vi
-        # får problemer med at kafka_message er bytes
-        # dictionary["kafka_message_bytes"] = message_value
-        return dictionary, kafka_hash
+        dictionary["kafka_hash"] = kafka_hash
+        dictionary["kafka_message"] = json.dumps(dictionary, ensure_ascii=True).encode(
+            "UTF-8"
+        )
+        return dictionary
 
     def _string_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
         dictionary = dict(
@@ -92,7 +89,8 @@ class KafkaSource(Source):
         # value["kafka_message_bytes"] = value.encode("UTF-8")
         value["kafka_schema_id"] = schema_id
         kafka_hash = hashlib.sha256(x[5:]).hexdigest()
-        return value, kafka_hash
+        value["kafka_hash"] = kafka_hash
+        return value
 
     def _kafka_config(self, value_deserializer):
         config = dict(
@@ -115,8 +113,7 @@ class KafkaSource(Source):
 
     def read_batches(self) -> Generator[List[Dict[Text, Any]], None, None]:
         def collect_message(record: ConsumerRecord) -> Dict[Text, Any]:
-            message, hash = record.value
-            message["kafka_hash"] = hash
+            message = record.value
             message["kafka_key"] = record.key
             message["kafka_timestamp"] = record.timestamp
             message["kafka_offset"] = record.offset

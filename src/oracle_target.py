@@ -29,7 +29,7 @@ class OracleTarget(Target):
         if k6_conf is not None:
             timestamp_col = k6_conf["timestamp"]
             timestamp = int_ms_to_date(batch[-1][timestamp_col])
-            person_identer = [msg[k6_conf["col"]] for msg in batch]
+            person_identer = [msg.get(k6_conf["col"]) for msg in batch]
 
             # generating sequential sql bind variable names for the range of personidenter i batchen
             # example :1,:2,:3 etc
