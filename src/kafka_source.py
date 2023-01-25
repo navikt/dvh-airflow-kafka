@@ -9,7 +9,7 @@ from benedict import benedict
 import requests
 import logging
 from typing import Generator, Dict, Text, Any, Tuple, List, Optional, Set
-from kafka import KafkaConsumer
+from confluent_kafka import Consumer
 from kafka.consumer.fetcher import ConsumerRecord, OffsetAndTimestamp
 from kafka.structs import TopicPartition
 from base import Source
@@ -24,7 +24,9 @@ class KafkaSource(Source):
         self.data_interval_start: int = int(os.environ["DATA_INTERVAL_START"])
         self.data_interval_end: int = int(os.environ["DATA_INTERVAL_END"])
 
-    connection_class = KafkaConsumer
+    connection_class = Consumer
+
+
 
     def _key_deserializer(x: Optional[bytes]) -> Text:
         if x is None:
@@ -94,22 +96,23 @@ class KafkaSource(Source):
         return value, kafka_hash
 
     def _kafka_config(self, value_deserializer):
-        config = dict(
-            auto_offset_reset="earliest",
-            enable_auto_commit=False,
-            bootstrap_servers=os.environ["KAFKA_BROKERS"].split(","),
-            key_deserializer=KafkaSource._key_deserializer,
-            value_deserializer=value_deserializer,
-        )
+
+        config = {
+            "group.id": self.config['group-id'],
+            "auto.offset.reset": "earliest",
+            "enable.auto.commit": False,
+            #"key.deserializer": KafkaSource._key_deserializer,
+            #"value.deserializer": value_deserializer,
+            "bootstrap.servers": os.environ["KAFKA_BROKERS"].split(",")
+        }
+
         if environment.isNotLocal:
-            config.update(
-                dict(
-                    security_protocol="SSL",
-                    ssl_certfile=os.environ["KAFKA_CERTIFICATE_PATH"],
-                    ssl_keyfile=os.environ["KAFKA_PRIVATE_KEY_PATH"],
-                    ssl_cafile=os.environ["KAFKA_CA_PATH"],
-                )
-            )
+            config.update({
+                "ssl.certificate.location": os.environ["KAFKA_CERTIFICATE_PATH"],
+                "ssl.key.location": os.environ["KAFKA_PRIVATE_KEY_PATH"],
+                "ssl.ca.location": os.environ["KAFKA_CA_PATH"],
+                "security.protocol": "SSL"
+            })
         return config
 
     def read_batches(self) -> Generator[List[Dict[Text, Any]], None, None]:
@@ -135,7 +138,7 @@ class KafkaSource(Source):
         logging.info(f"data_interval_start: {self.data_interval_start}")
         logging.info(f"data_interval_stop: {self.data_interval_end}")
 
-        consumer: KafkaConsumer = KafkaSource.connection_class(
+        consumer: Consumer = KafkaSource.connection_class(
             **self._kafka_config(value_deserializer)
         )
         partitions = consumer.partitions_for_topic(self.config["topic"])
