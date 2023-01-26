@@ -6,13 +6,13 @@ START WITH 1 INCREMENT BY 1 CACHE 20;
 
 CREATE TABLE kafka.raw_isdialogmote (
   kafka_message       BLOB,
-  kafka_message_byes  BLOB,
+  kafka_message_bytes  BLOB,
   kafka_key           VARCHAR2(255 CHAR),
   kafka_topic         VARCHAR2(255 CHAR)  NOT NULL,
   kafka_offset        NUMBER              NOT NULL,
   kafka_mottatt_dato  DATE                NOT NULL,
   kafka_partisjon     NUMBER              NOT NULL,
-  kafka_hash          VARCHAR2(255 CHAR)  NOT NULL,
+  kafka_hash          VARCHAR2(255 CHAR),
   lastet_dato         DATE                NOT NULL,
   kildesystem         VARCHAR2(255 CHAR)  NOT NULL
 );
