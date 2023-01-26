@@ -9,9 +9,9 @@ from benedict import benedict
 import requests
 import logging
 from typing import Generator, Dict, Text, Any, Tuple, List, Optional, Set
-from confluent_kafka import Consumer
-from kafka.consumer.fetcher import ConsumerRecord, OffsetAndTimestamp
-from kafka.structs import TopicPartition
+from confluent_kafka import Consumer, TopicPartition, Message
+# from kafka.consumer.fetcher import ConsumerRecord, OffsetAndTimestamp
+# from kafka.structs import TopicPartition
 from base import Source
 import environment
 
@@ -103,7 +103,7 @@ class KafkaSource(Source):
             "enable.auto.commit": False,
             #"key.deserializer": KafkaSource._key_deserializer,
             #"value.deserializer": value_deserializer,
-            "bootstrap.servers": os.environ["KAFKA_BROKERS"].split(",")
+            "bootstrap.servers": os.environ["KAFKA_BROKERS"]
         }
 
         if environment.isNotLocal:
@@ -115,9 +115,22 @@ class KafkaSource(Source):
             })
         return config
 
+    def seek_to_timestamp(self, consumer, ts) -> List[TopicPartition]:
+        topic_metadata = consumer.list_topics().topics[self.config['topic']]
+
+        topic_partitions = [
+            TopicPartition(
+                topic=self.config['topic'],
+                partition=k,
+                offset=ts)
+            for k in topic_metadata.partitions.keys()
+        ]
+
+        return consumer.offsets_for_times(topic_partitions)
+
     def read_batches(self) -> Generator[List[Dict[Text, Any]], None, None]:
-        def collect_message(record: ConsumerRecord) -> Dict[Text, Any]:
-            message, hash = record.value
+        def collect_message(msg: Message) -> Dict[Text, Any]:
+            message, hash = msg.value
             message["kafka_hash"] = hash
             message["kafka_key"] = record.key
             message["kafka_timestamp"] = record.timestamp
@@ -138,41 +151,68 @@ class KafkaSource(Source):
         logging.info(f"data_interval_start: {self.data_interval_start}")
         logging.info(f"data_interval_stop: {self.data_interval_end}")
 
+
+        ##
         consumer: Consumer = KafkaSource.connection_class(
             **self._kafka_config(value_deserializer)
         )
-        partitions = consumer.partitions_for_topic(self.config["topic"])
-        topic_partitions = {TopicPartition(
-            self.config["topic"], p) for p in partitions}
-        consumer.assign(topic_partitions)
 
-        tp_ts_dict: Dict[TopicPartition, int] = dict(
-            zip(topic_partitions, [
-                self.data_interval_start] * len(topic_partitions))
+        # partitions = consumer.partitions_for_topic(self.config["topic"])
+        # topic_partitions = {
+        #     TopicPartition(self.config["topic"], p)
+        #     for p in partitions
+        # }
+        # consumer.assign(topic_partitions)
+
+        # tp_ts_dict: Dict[TopicPartition, int] = dict(
+        #     zip(topic_partitions, [
+        #         self.data_interval_start] * len(topic_partitions))
+        # )
+
+        offset_starts: List[TopicPartition] = self.seek_to_timestamp(
+            consumer=consumer,
+            ts=self.data_interval_start
         )
-        offset_starts: Dict[
-            TopicPartition, OffsetAndTimestamp
-        ] = consumer.offsets_for_times(tp_ts_dict)
+        offset_ends: List[TopicPartition] = self.seek_to_timestamp(
+            consumer=consumer,
+            ts=self.data_interval_end
+        )
+
         tp_done: Set[TopicPartition] = set()
-        offset_ends: Dict[TopicPartition,
-                          int] = consumer.end_offsets(topic_partitions)
-        for tp, offset_and_ts in offset_starts.items():
-            logging.info(f"last offset for {tp}: {offset_ends.get(tp)}")
-            if offset_and_ts is None:
-                tp_done.add(tp)
+
+
+
+
+        ###
+        for tp in offset_starts:
+            print(offset_starts)
+            if tp.offset == -1:
+                logging.warning(
+                    f"Provided start data_interval_start: {self.data_interval_start} exceeds that of the last message in the partition.")
+                offset_starts.remove(tp)
             else:
                 logging.info(
-                    f"start consuming on offset for {tp}: {offset_and_ts}")
-                consumer.seek(tp, offset_and_ts.offset)
+                    f"start consuming on offset for {tp.partition}: {tp.offset}")
+                
 
+        for tp in offset_ends:
+            if tp.offset == -1:
+                logging.info(
+                    f"Provided data_interval_end: {self.data_interval_end} exceeds that of the last message in the partition.")
+
+
+        consumer.assign(offset_starts)
         while True:
-            tpd_batch = consumer.poll(
-                self.config["batch-interval"], max_records=self.config["batch-size"]
+            tpd_batch = consumer.consume(
+                num_messages = self.config["batch-size"],
+                timeout = self.config["batch-interval"]
             )
+
+
+
             batch: List[Dict] = [
-                collect_message(record)
-                for records in tpd_batch.values()
-                for record in records
+                collect_message(msg)
+                for msg in tpd_batch
             ]
 
             for msg in batch:
