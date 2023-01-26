@@ -32,15 +32,21 @@ class KafkaSource(Source):
         return x.decode("utf-8")
 
     def _json_deserializer(self, message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
-        message = message_value.decode("UTF-8")
-        dictionary = benedict(json.loads(message))
+        #message = json.loads(message_value.decode("UTF-8"))
+        if message_value is None:
+            logging.info(f"Her er meldinger som feiler: {message_value}")
+        else:
+            message = message_value.decode("UTF-8")
+        dictionary = benedict(message, keypath_separator=None)
+        separator = self.config.get("keypath-seperator")
+        if separator is not None:
+            dictionary.keypath_separator = separator      
         filter_config = self.config.get("message-fields-filter")
         if filter_config is not None:
             dictionary.remove(filter_config)
         kafka_hash = hashlib.sha256(message_value).hexdigest()
-        dictionary["kafka_message"] = json.dumps(dictionary, ensure_ascii=True).encode(
-            "UTF-8"
-        )
+        dictionary["kafka_message"] = json.dumps(dictionary, ensure_ascii=True).encode("UTF-8")
+
         # Kanskje implementeres hvis vi finner en måte å gjøre den optional og vi
         # får problemer med at kafka_message er bytes
         # dictionary["kafka_message_bytes"] = message_value
@@ -75,7 +81,10 @@ class KafkaSource(Source):
         decoder = avro.io.BinaryDecoder(reader)
         value = schema_cache[schema_id].read(decoder)
         value["kafka_message"] = value.encode("UTF-8")
-        value = benedict(value)
+        value = benedict(value, keypath_separator=None)
+        separator = self.config.get("keypath-seperator")
+        if separator is not None:
+            value.keypath_separator = separator
         filter_config = self.config.get("message-fields-filter")
         if filter_config is not None:
             value.remove(filter_config)
