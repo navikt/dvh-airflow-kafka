@@ -36,6 +36,8 @@ services:
   db:
     image: container-registry.oracle.com/database/express:21.3.0-xe
     restart: always
+    profiles:
+      - db
     volumes:
       - ./sql:/docker-entrypoint-initdb.d/startup
     environment:
