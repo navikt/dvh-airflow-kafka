@@ -18,13 +18,27 @@ import environment
 
 class KafkaSource(Source):
     """Kafka Airflow Source"""
+    connection_class = Consumer
 
     def __init__(self, config: Dict[Text, Any]) -> None:
         super().__init__(config)
+        self.value_deserializer = self.__set_value_deserializer()
         self.data_interval_start: int = int(os.environ["DATA_INTERVAL_START"])
         self.data_interval_end: int = int(os.environ["DATA_INTERVAL_END"])
 
-    connection_class = Consumer
+
+
+    def __set_value_deserializer(self):
+        if self.config["schema"] == "avro":
+            value_deserializer = self._avro_deserializer
+        elif self.config["schema"] == "json":
+            value_deserializer = self._json_deserializer
+        elif self.config["schema"] == "string":
+            value_deserializer = self._string_deserializer
+        else:
+            raise AssertionError
+
+        return value_deserializer
 
 
 
@@ -95,14 +109,14 @@ class KafkaSource(Source):
         kafka_hash = hashlib.sha256(x[5:]).hexdigest()
         return value, kafka_hash
 
-    def _kafka_config(self, value_deserializer):
+    def _kafka_config(self):
 
         config = {
             "group.id": self.config['group-id'],
             "auto.offset.reset": "earliest",
             "enable.auto.commit": False,
-            #"key.deserializer": KafkaSource._key_deserializer,
-            #"value.deserializer": value_deserializer,
+            # "key.deserializer": KafkaSource._key_deserializer,
+            # "value.deserializer": self.value_deserializer,
             "bootstrap.servers": os.environ["KAFKA_BROKERS"]
         }
 
@@ -115,10 +129,18 @@ class KafkaSource(Source):
             })
         return config
 
-    def seek_to_timestamp(self, consumer, ts) -> List[TopicPartition]:
-        topic_metadata = consumer.list_topics().topics[self.config['topic']]
+    def seek_to_timestamp(self, consumer, ts) -> Dict[int, TopicPartition]:
+        """
+        returns tlist of TopicPartitions ordered by partition number
+        """
 
-        topic_partitions = [
+        topics = consumer.list_topics().topics
+        for topic in topics:
+            print(topic)
+
+        topic_metadata = topics[self.config['topic']]
+
+        tp_with_timestamp_as_offset = [
             TopicPartition(
                 topic=self.config['topic'],
                 partition=k,
@@ -126,27 +148,33 @@ class KafkaSource(Source):
             for k in topic_metadata.partitions.keys()
         ]
 
-        return consumer.offsets_for_times(topic_partitions)
+        topic_partitions = consumer.offsets_for_times(tp_with_timestamp_as_offset)
+
+
+        return {tp.partition: tp for tp in topic_partitions}
+
+
+    def proper_message(self, msg):
+        return msg.error() is None
+
+
+    def unassign_if_assigned(self, consumer, tp):
+        if tp in consumer.assignment():
+            consumer.incremental_unassign([tp])
+
 
     def read_batches(self) -> Generator[List[Dict[Text, Any]], None, None]:
         def collect_message(msg: Message) -> Dict[Text, Any]:
-            message, hash = msg.value
+            message, hash = self.value_deserializer(msg.value())
             message["kafka_hash"] = hash
-            message["kafka_key"] = record.key
-            message["kafka_timestamp"] = record.timestamp
-            message["kafka_offset"] = record.offset
-            message["kafka_partition"] = record.partition
-            message["kafka_topic"] = record.topic
+            message["kafka_key"] = KafkaSource._key_deserializer(msg.key())
+            message["kafka_timestamp"] = msg.timestamp()[1]
+            message["kafka_offset"] = msg.offset()
+            message["kafka_partition"] = msg.partition()
+            message["kafka_topic"] = msg.topic()
             return message
 
-        if self.config["schema"] == "avro":
-            value_deserializer = self._avro_deserializer
-        elif self.config["schema"] == "json":
-            value_deserializer = self._json_deserializer
-        elif self.config["schema"] == "string":
-            value_deserializer = self._string_deserializer
-        else:
-            raise AssertionError
+
 
         logging.info(f"data_interval_start: {self.data_interval_start}")
         logging.info(f"data_interval_stop: {self.data_interval_end}")
@@ -154,7 +182,7 @@ class KafkaSource(Source):
 
         ##
         consumer: Consumer = KafkaSource.connection_class(
-            **self._kafka_config(value_deserializer)
+            **self._kafka_config()
         )
 
         # partitions = consumer.partitions_for_topic(self.config["topic"])
@@ -169,11 +197,11 @@ class KafkaSource(Source):
         #         self.data_interval_start] * len(topic_partitions))
         # )
 
-        offset_starts: List[TopicPartition] = self.seek_to_timestamp(
+        offset_starts: Dict[int, TopicPartition] = self.seek_to_timestamp(
             consumer=consumer,
             ts=self.data_interval_start
         )
-        offset_ends: List[TopicPartition] = self.seek_to_timestamp(
+        offset_ends: Dict[int, TopicPartition] = self.seek_to_timestamp(
             consumer=consumer,
             ts=self.data_interval_end
         )
@@ -184,60 +212,60 @@ class KafkaSource(Source):
 
 
         ###
-        for tp in offset_starts:
+        for tp in offset_starts.values():
             print(offset_starts)
             if tp.offset == -1:
                 logging.warning(
                     f"Provided start data_interval_start: {self.data_interval_start} exceeds that of the last message in the partition.")
-                offset_starts.remove(tp)
+                end_offset = consumer.get_watermark_offsets(tp)[1]
+                tp.offset = end_offset
+                del offset_starts[tp.partition]
+                del offset_ends[tp.partition]
             else:
                 logging.info(
                     f"start consuming on offset for {tp.partition}: {tp.offset}")
-                
+            
 
-        for tp in offset_ends:
+        for tp in offset_ends.values():
             if tp.offset == -1:
+                end_offset = consumer.get_watermark_offsets(tp)[1]
+                tp.offset = end_offset
                 logging.info(
                     f"Provided data_interval_end: {self.data_interval_end} exceeds that of the last message in the partition.")
-
-
-        consumer.assign(offset_starts)
-        while True:
+        
+        consumer.assign(list(offset_starts.values()))
+        while consumer.assignment():
             tpd_batch = consumer.consume(
                 num_messages = self.config["batch-size"],
                 timeout = self.config["batch-interval"]
             )
 
-
-
             batch: List[Dict] = [
                 collect_message(msg)
-                for msg in tpd_batch
+                for msg in tpd_batch if self.proper_message(msg)
             ]
 
             for msg in batch:
                 if(msg["kafka_offset"] % 500 == 0):
                     logging.info(f'Current kafka_offset: {msg["kafka_offset"]}')
                 tp: TopicPartition = TopicPartition(
-                    msg["kafka_topic"], msg["kafka_partition"]
+                    msg["kafka_topic"], msg["kafka_partition"], msg["kafka_offset"]
                 )
-                offset = msg["kafka_offset"]
-                end_offset = offset_ends.get(tp) - 1
-                if (
-                    tp not in tp_done
-                    and msg["kafka_timestamp"] >= self.data_interval_end
-                ):
-                    tp_done.add(tp)
-                    consumer.pause(tp)
-                    timestamp = msg["kafka_timestamp"]
+                
+                end_offset = offset_ends.get(tp.partition).offset - 1
+                if (msg["kafka_timestamp"] >= self.data_interval_end):
+                    self.unassign_if_assigned(consumer, tp)
+
                     logging.info(
-                        f"TopicPartition: {tp} is done on offset: {offset} with timestamp: {timestamp}"
+                        f"TopicPartition: {tp} is done on offset: {tp.offset} with timestamp: {msg['kafka_timestamp']}"
                     )
-                if offset == end_offset:
+
+                if tp.offset == end_offset:
+                    self.unassign_if_assigned(consumer, tp)
                     logging.info(
-                        f"TopicPartition: {tp} is done on offset: {offset} becaused it's reached end"
+                        f"TopicPartition: {tp} is done on offset: {tp.offset} becaused it's reached end"
                     )
-                    tp_done.add(tp)
+                    
 
             batch_filtered = [
                 msg for msg in batch if msg["kafka_timestamp"] < self.data_interval_end
@@ -245,6 +273,3 @@ class KafkaSource(Source):
 
             if len(batch_filtered) > 0:
                 yield batch_filtered
-
-            if tp_done == topic_partitions:
-                break
