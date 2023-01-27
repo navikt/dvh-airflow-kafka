@@ -1,6 +1,7 @@
 import json
 import glob
 import uuid
+import random
 from kafka import KafkaProducer
 
 producer = KafkaProducer(bootstrap_servers=['localhost:9092'])
@@ -14,7 +15,8 @@ for melding in meldinger:
         data = json.dumps(tmp_dict)
         producer.send(
             topic,
-            value=data.encode('utf-8')
+            value=data.encode('utf-8'),
+            key=bytearray(str(random.randint(0,10)).encode('UTF-8'))
         )
     jsonfile.close()
 producer.flush()
