@@ -28,3 +28,17 @@ pytest = "^7.2.1"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+# Pytest config
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+pythonpath = "src"
+testpaths = [
+    "src/tests",
+]
+markers = [
+    "unit: tests for custom transformations",
+    "functional: tests for source/target interfaces",
+    "integration: Integration tests",
+]
