@@ -14,6 +14,11 @@ class Source:
     ) -> Generator[List[Dict[Text, Any]], None, None]:
         raise NotImplementedError
 
+    def read_once(
+        self, *args, **kwargs
+    ) -> Dict[Text, Any]:
+        raise NotImplementedError
+
 
 class Target:
 
