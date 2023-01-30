@@ -76,7 +76,7 @@ class OracleTarget(Target):
             try:
                 with con.cursor() as cur:
                     logging.debug(f"oracledb.is_thin_mode(): {con.thin}")
-                    cur.setinputsizes(**self.get_kv_from_config_by_method("cx_Oracle.Cursor.setinputsizes"))
+                    cur.setinputsizes(**self.get_kv_from_config_by_method('oracledb.Cursor.setinputsizes'))
                     cur.executemany(sql, batch)
                 con.commit()
             except oracledb.DatabaseError as e:
