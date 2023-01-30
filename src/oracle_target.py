@@ -1,10 +1,8 @@
 import os
 from typing import Dict, Text, Any, List, Tuple
-from benedict import benedict
 import oracledb
 from base import Target
 from transform import int_ms_to_date
-import json
 import logging
 
 
@@ -76,7 +74,11 @@ class OracleTarget(Target):
             try:
                 with con.cursor() as cur:
                     logging.debug(f"oracledb.is_thin_mode(): {con.thin}")
-                    cur.setinputsizes(**self.get_kv_from_config_by_method('oracledb.Cursor.setinputsizes'))
+                    cur.setinputsizes(
+                        **self.get_kv_from_config_by_method(
+                            "oracledb.Cursor.setinputsizes"
+                        )
+                    )
                     cur.executemany(sql, batch)
                 con.commit()
             except oracledb.DatabaseError as e:
