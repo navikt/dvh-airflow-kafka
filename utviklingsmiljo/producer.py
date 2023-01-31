@@ -9,13 +9,11 @@ meldinger = glob.glob("./kafka-meldinger/melding-*.json")
 
 for melding in meldinger:
     with open(melding, "r", encoding="utf-8") as jsonfile:
-        tmp_dict = json.load(jsonfile)
-        topic = tmp_dict["topic"]
-        data = json.dumps(tmp_dict)
-        producer.send(
-            topic,
-            key="blabla".encode("utf-8")
-            # value=data.encode('utf-8')
-        )
+        data = None
+        file = jsonfile.read()
+        if file:
+            tmp_dict = json.loads(file)
+            data = json.dumps(tmp_dict).encode("utf-8")
+        producer.send(topic="test", key="blabla".encode("utf-8"), value=data)
     jsonfile.close()
 producer.flush()

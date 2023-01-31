@@ -35,13 +35,13 @@ class KafkaSource(Source):
         if message_value is None:
             return benedict(dict(kafka_hash=None, kafka_message=None))
         message = json.loads(message_value.decode("UTF-8"))
-        dictionary = benedict(message, keypath_separator=None)
-        separator = self.config.get("keypath-seperator")
-        if separator is not None:
-            dictionary.keypath_separator = separator
-        filter_config = self.config.get("message-fields-filter")
-        if filter_config is not None:
-            dictionary.remove(filter_config)
+
+        keypath_seperator = self.config.get("keypath-seperator")
+        dictionary = benedict(message, keypath_separator=keypath_seperator)
+
+        filter_config = self.config.get("message-fields-filter", [])
+        dictionary.remove(filter_config)
+
         kafka_hash = hashlib.sha256(message_value).hexdigest()
         dictionary["kafka_hash"] = kafka_hash
         dictionary["kafka_message"] = json.dumps(dictionary, ensure_ascii=True).encode(
@@ -77,19 +77,17 @@ class KafkaSource(Source):
         reader = io.BytesIO(x[5:])
         decoder = avro.io.BinaryDecoder(reader)
         value = schema_cache[schema_id].read(decoder)
-        value["kafka_message"] = value.encode("UTF-8")
-        value = benedict(value, keypath_separator=None)
-        separator = self.config.get("keypath-seperator")
-        if separator is not None:
-            value.keypath_separator = separator
-        filter_config = self.config.get("message-fields-filter")
-        if filter_config is not None:
-            value.remove(filter_config)
-        # value["kafka_message"] = json.dumps(value, default=str, ensure_ascii=False)
-        # value["kafka_message_bytes"] = value.encode("UTF-8")
-        value["kafka_schema_id"] = schema_id
+
+        keypath_seperator = self.config.get("keypath-seperator")
+        value = benedict(value, keypath_separator=keypath_seperator)
+
+        filter_config = self.config.get("message-fields-filter", [])
+        value.remove(filter_config)
+
         kafka_hash = hashlib.sha256(x[5:]).hexdigest()
         value["kafka_hash"] = kafka_hash
+        value["kafka_message"] = value.encode("UTF-8")
+        value["kafka_schema_id"] = schema_id
         return value
 
     def _kafka_config(self, value_deserializer):
@@ -184,7 +182,7 @@ class KafkaSource(Source):
                     )
                 if offset == end_offset:
                     logging.info(
-                        f"TopicPartition: {tp} is done on offset: {offset} becaused it's reached end"
+                        f"TopicPartition: {tp} is done on offset: {offset} becaused it reached the end of the partition"
                     )
                     tp_done.add(tp)
 
