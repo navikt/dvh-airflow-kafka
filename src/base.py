@@ -1,6 +1,7 @@
 from typing import Generator, Dict, Text, Any, List, Tuple
 import oracledb
 
+
 class Source:
 
     connection_class: Any = NotImplemented
