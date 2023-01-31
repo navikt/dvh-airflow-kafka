@@ -9,7 +9,7 @@ import logging
 class OracleTarget(Target):
     """Oracle Target"""
 
-    oracledb.init_oracle_client()
+    #oracledb.init_oracle_client()
 
     connection_class = oracledb.connect
 
