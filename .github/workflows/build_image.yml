@@ -4,12 +4,12 @@ name: Publish to ghcr
 on:
   pull_request:
     branches:
-      - master
-      - gcp
+      - main
+      - on-prem
   push:
     branches:
-      - master
-      - gcp
+      - main
+      - on-prem
 
 env:
   IMAGE_NAME: "ghcr.io/${{ github.repository }}"
@@ -26,12 +26,12 @@ jobs:
           BRANCH: "${{github.ref}}"
         run: |
           sha=$(echo $FULL_SHA | cut -c1-7)
-          if [ $BRANCH = refs/heads/master ]
+          if [ $BRANCH = refs/heads/main ]
           then
               echo "IMAGE=$IMAGE_NAME:$sha" >> $GITHUB_ENV
-          elif [ $BRANCH = refs/heads/gcp ]
+          elif [ $BRANCH = refs/heads/on-prem ]
           then
-              echo "IMAGE=$IMAGE_NAME-gcp:$sha" >> $GITHUB_ENV
+              echo "IMAGE=$IMAGE_NAME-on-prem:$sha" >> $GITHUB_ENV
           fi
       - name: Add pull request head sha to image environment variable
         if: ${{ github.event_name == 'pull_request' }}
@@ -40,12 +40,12 @@ jobs:
           BRANCH: "${{github.event.pull_request.base.ref}}"
         run: |
           sha=$(echo $FULL_SHA | cut -c1-7)
-          if [ $BRANCH = master ]
+          if [ $BRANCH = main ]
           then
               echo "IMAGE=$IMAGE_NAME:RC-$sha" >> $GITHUB_ENV
-          elif [ $BRANCH = gcp ]
+          elif [ $BRANCH = on-prem ]
           then
-              echo "IMAGE=$IMAGE_NAME-gcp:RC-$sha" >> $GITHUB_ENV
+              echo "IMAGE=$IMAGE_NAME-on-prem:RC-$sha" >> $GITHUB_ENV
           fi
 
       - name: Set up Docker Buildx
