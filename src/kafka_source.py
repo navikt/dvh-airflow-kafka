@@ -153,18 +153,22 @@ class KafkaSource(Source):
 
         return {tp.partition: tp for tp in topic_partitions}
 
-
-    def proper_message(self, msg):
-        return msg.error() is None
-
-
     def unassign_if_assigned(self, consumer, tp):
         if tp in consumer.assignment():
             consumer.incremental_unassign([tp])
 
-
     def read_batches(self) -> Generator[List[Dict[Text, Any]], None, None]:
         def collect_message(msg: Message) -> Dict[Text, Any]:
+            if msg.error() is not None:
+                message = {}
+                message["kafka_hash"] = hash
+                message["kafka_key"] = KafkaSource._key_deserializer(msg.key())
+                message["kafka_timestamp"] = msg.timestamp()[1]
+                message["kafka_offset"] = msg.offset()
+                message["kafka_partition"] = msg.partition()
+                message["kafka_topic"] = msg.topic()
+                return {}
+
             message, hash = self.value_deserializer(msg.value())
             message["kafka_hash"] = hash
             message["kafka_key"] = KafkaSource._key_deserializer(msg.key())
@@ -212,21 +216,20 @@ class KafkaSource(Source):
 
 
         ###
+        tp_to_assign_start = {}
+        tp_to_assign_end   = {}
         for tp in offset_starts.values():
             print(offset_starts)
             if tp.offset == -1:
                 logging.warning(
                     f"Provided start data_interval_start: {self.data_interval_start} exceeds that of the last message in the partition.")
-                end_offset = consumer.get_watermark_offsets(tp)[1]
-                tp.offset = end_offset
-                del offset_starts[tp.partition]
-                del offset_ends[tp.partition]
             else:
                 logging.info(
                     f"start consuming on offset for {tp.partition}: {tp.offset}")
+                tp_to_assign_start[tp.partition] = tp
+                tp_to_assign_end[tp.partition] = offset_ends[tp.partition]
             
-
-        for tp in offset_ends.values():
+        for tp in tp_to_assign_end.values():
             if tp.offset == -1:
                 end_offset = consumer.get_watermark_offsets(tp)[1]
                 tp.offset = end_offset
@@ -236,13 +239,13 @@ class KafkaSource(Source):
         consumer.assign(list(offset_starts.values()))
         while consumer.assignment():
             tpd_batch = consumer.consume(
-                num_messages = self.config["batch-size"],
-                timeout = self.config["batch-interval"]
+                num_messages=self.config["batch-size"],
+                timeout=self.config["batch-interval"]
             )
 
             batch: List[Dict] = [
                 collect_message(msg)
-                for msg in tpd_batch if self.proper_message(msg)
+                for msg in tpd_batch
             ]
 
             for msg in batch:
