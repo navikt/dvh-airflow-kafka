@@ -3,7 +3,6 @@ from typing import Dict, Text, Any, List, Tuple
 import oracledb
 from base import Target
 from transform import int_ms_to_date
-import json
 import logging
 
 
@@ -30,7 +29,7 @@ class OracleTarget(Target):
         if k6_conf is not None:
             timestamp_col = k6_conf["timestamp"]
             timestamp = int_ms_to_date(batch[-1][timestamp_col])
-            person_identer = [msg[k6_conf["col"]] for msg in batch]
+            person_identer = [msg.get(k6_conf["col"]) for msg in batch]
 
             # generating sequential sql bind variable names for the range of personidenter i batchen
             # example :1,:2,:3 etc
@@ -75,9 +74,11 @@ class OracleTarget(Target):
         with self.create_connection() as con:
             try:
                 with con.cursor() as cur:
-                    logging.debug(f"oracledb.is_thin_mode(): {con.thin}")
                     cur.setinputsizes(
-                        **self.get_kv_from_config_by_method('oracledb.Cursor.setinputsizes'))
+                        **self.get_kv_from_config_by_method(
+                            "oracledb.Cursor.setinputsizes"
+                        )
+                    )
                     cur.executemany(sql, batch)
                 con.commit()
             except oracledb.DatabaseError as e:

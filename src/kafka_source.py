@@ -48,22 +48,22 @@ class KafkaSource(Source):
         return x.decode("utf-8")
 
     def _json_deserializer(self, message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
-        message = message_value.decode("UTF-8")
-        dictionary = benedict(json.loads(message))
-        separator = self.config.get("keypath-seperator")
-        if separator is not None:
-            dictionary.keypath_separator = separator
-        filter_config = self.config.get("message-fields-filter")
-        if filter_config is not None:
-            dictionary.remove(filter_config)
+        if message_value is None:
+            return benedict(dict(kafka_hash=None, kafka_message=None))
+        message = json.loads(message_value.decode("UTF-8"))
+
+        keypath_seperator = self.config.get("keypath-seperator")
+        dictionary = benedict(message, keypath_separator=keypath_seperator)
+
+        filter_config = self.config.get("message-fields-filter", [])
+        dictionary.remove(filter_config)
+
         kafka_hash = hashlib.sha256(message_value).hexdigest()
+        dictionary["kafka_hash"] = kafka_hash
         dictionary["kafka_message"] = json.dumps(dictionary, ensure_ascii=True).encode(
             "UTF-8"
         )
-        # Kanskje implementeres hvis vi finner en måte å gjøre den optional og vi
-        # får problemer med at kafka_message er bytes
-        # dictionary["kafka_message_bytes"] = message_value
-        return dictionary, kafka_hash
+        return dictionary
 
     def _string_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
         dictionary = dict(
@@ -110,7 +110,6 @@ class KafkaSource(Source):
         return value, kafka_hash
 
     def _kafka_config(self):
-
         config = {
             "group.id": self.config['group-id'],
             "auto.offset.reset": "earliest",
