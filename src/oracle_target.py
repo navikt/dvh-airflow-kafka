@@ -8,14 +8,16 @@ import logging
 
 
 class OracleTarget(Target):
-    """Oracle Target"""
-
-    oracledb.init_oracle_client()
-
     connection_class = oracledb.connect
 
-    def _oracle_connection(self) -> oracledb.connect:
-        return OracleTarget.connection_class(
+    """Oracle Target"""
+    def __init__(self, config: Dict[Text, Any], connection: oracledb.connect = None) -> None:
+        super().__init__(config)
+        
+        oracledb.init_oracle_client()
+
+    def _create_connection(self) -> oracledb.connect:
+        return oracledb.connect(
             user=os.environ["DB_USER"],
             password=os.environ["DB_PASSWORD"],
             dsn=os.environ["DB_DSN"],
@@ -49,7 +51,7 @@ class OracleTarget(Target):
                 AND skjermet_kode IN(6,7)
             """
 
-            with self._oracle_connection() as con:
+            with self.create_connection() as con:
                 with con.cursor() as cur:
                     return cur.execute(sql, bind_values).fetchall()
         return []
@@ -70,7 +72,7 @@ class OracleTarget(Target):
                 sql += f""" and not exists ( select null from {table} where 
                 {duplicate_column} = :{duplicate_column} )"""
 
-        with self._oracle_connection() as con:
+        with self.create_connection() as con:
             try:
                 with con.cursor() as cur:
                     logging.debug(f"oracledb.is_thin_mode(): {con.thin}")
