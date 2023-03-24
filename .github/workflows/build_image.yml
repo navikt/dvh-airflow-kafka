@@ -11,6 +11,8 @@ on:
       - main
       - on-prem
       - gcp-dv-a-team
+  workflow_dispatch:
+    
 
 env:
   IMAGE_NAME: "ghcr.io/${{ github.repository }}"
