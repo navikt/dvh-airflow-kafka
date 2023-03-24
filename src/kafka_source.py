@@ -59,11 +59,10 @@ class KafkaSource(Source):
         dictionary.remove(filter_config)
 
         kafka_hash = hashlib.sha256(message_value).hexdigest()
-        dictionary["kafka_hash"] = kafka_hash
-        dictionary["kafka_message"] = json.dumps(dictionary, ensure_ascii=True).encode(
+        kafka_message = json.dumps(dictionary, ensure_ascii=True).encode(
             "UTF-8"
         )
-        return dictionary
+        return kafka_hash, kafka_message
 
     def _string_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
         dictionary = dict(
@@ -158,18 +157,9 @@ class KafkaSource(Source):
 
     def read_batches(self) -> Generator[List[Dict[Text, Any]], None, None]:
         def collect_message(msg: Message) -> Dict[Text, Any]:
-            if msg.error() is not None:
-                message = {}
-                message["kafka_hash"] = hash
-                message["kafka_key"] = KafkaSource._key_deserializer(msg.key())
-                message["kafka_timestamp"] = msg.timestamp()[1]
-                message["kafka_offset"] = msg.offset()
-                message["kafka_partition"] = msg.partition()
-                message["kafka_topic"] = msg.topic()
-                return {}
-
-            message, hash = self.value_deserializer(msg.value())
-            message["kafka_hash"] = hash
+            message = {}
+            message["kafka_message"], message["kafka_hash"] = \
+                (msg.error(), None) or self.value_deserializer(msg.value())
             message["kafka_key"] = KafkaSource._key_deserializer(msg.key())
             message["kafka_timestamp"] = msg.timestamp()[1]
             message["kafka_offset"] = msg.offset()
@@ -177,13 +167,9 @@ class KafkaSource(Source):
             message["kafka_topic"] = msg.topic()
             return message
 
-
-
         logging.info(f"data_interval_start: {self.data_interval_start}")
         logging.info(f"data_interval_stop: {self.data_interval_end}")
 
-
-        ##
         consumer: Consumer = KafkaSource.connection_class(
             **self._kafka_config()
         )
