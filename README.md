@@ -40,7 +40,7 @@
 `kafkacat -b localhost:9092 -t test`
 
 ## Komme inn i zookeeper shell
-`docker exec -it $(docker ps -aqf "name=zookeeper") bash`
+`docker exec -it $(docker ps -aqf "name=zookeeper") /bin/zookeeper-shell localhost:2181 ls /brokers/topics`
 
 - Liste topics `/bin/zookeeper-shell localhost:2181 ls /brokers/topics`
 
