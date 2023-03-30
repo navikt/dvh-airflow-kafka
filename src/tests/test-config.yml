@@ -1,0 +1,19 @@
+source:
+  type: kafka-airflow
+  batch-size: 50
+  batch-interval: 5
+  topic: test
+  schema: json
+  group-id: local-test
+  keypath-seperator: /
+  message-fields-filter:
+    - topic
+    - melding
+target:
+  type: asdf
+  topic: test
+transform:
+  - src: kafka_message
+    dst: kafka_message
+  - src: id
+    dst: id
