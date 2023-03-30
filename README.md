@@ -20,9 +20,7 @@
 
 `d push ghcr.io/navikt/dvh-kafka-airflow-consumer:0.3.`
 
-# Espens utviklingsmiljø på WSL2 Ubuntu
-
-## cd til prosjektmappe
+## cd til Espens utviklingsmiljø prosjektmappe
 ``cd /mnt/c/Dev/datavarehus/dvh-airflow-kafka/utviklingsmiljo/``
 
 ## Stop og slett alle containers
