@@ -6,9 +6,7 @@ import kafka
 import avro
 import hashlib
 
-from typing import Dict, Text, Any, List, Optional, Tuple, Callable
-
-
+from typing import Dict, Text, Any, List, Optional, Tuple
 
 
 class AvroUtils:
@@ -17,7 +15,7 @@ class AvroUtils:
         self.schema_cache = dict()
 
     def avro_schema(self, schema_id: int = 0, latest: bool = False) -> Text:
-        if not schema_id in self.schema_cache:
+        if schema_id not in self.schema_cache:
             schema_registry = os.environ["KAFKA_SCHEMA_REGISTRY"]
             un = os.environ["KAFKA_SCHEMA_REGISTRY_USER"]
             pw = os.environ["KAFKA_SCHEMA_REGISTRY_PASSWORD"]
@@ -42,7 +40,6 @@ class AvroUtils:
         buf.seek(0)
         
         return (buf.read())
-
 
 
 def key_serializer(x: Optional[Text]) -> bytes:

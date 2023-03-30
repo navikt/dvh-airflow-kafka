@@ -1,14 +1,21 @@
 import pytest
 import os
-# import dwh_consumer.utils.kafka_utils as ku
+import yaml
+import json
+import environment
 
 from kafka import KafkaProducer, KafkaConsumer
 from kafka.errors import KafkaError
 from kafka_source import KafkaSource
-# from dwh_consumer.targets import KafkaTarget
+from kafka_target import KafkaTarget
 from unittest import mock
 
 from schema_registry.client import SchemaRegistryClient, schema
+
+__location__ = os.path.realpath(
+    os.path.join(os.getcwd(), os.path.dirname(__file__)))
+avro_schema_file = os.path.join(__location__, 'test.avsc')
+
 
 
 
@@ -21,67 +28,65 @@ producer = KafkaProducer(
     )
 """
 
-            
+
 @pytest.fixture(autouse=True)
 def mock_settings_env_vars():
+    environment.isNotLocal = False
     test_env = {
         "KAFKA_SCHEMA_REGISTRY": "http://127.0.0.1:8085",
         "KAFKA_SCHEMA_REGISTRY_USER": "",
         "KAFKA_SCHEMA_REGISTRY_PASSWORD": "",
-        'KAFKA_BROKERS': "kafka:9092",
+        'KAFKA_BROKERS': "127.0.0.1:9092",
         "KAFKA_CERTIFICATE_PATH": "",
         "KAFKA_PRIVATE_KEY_PATH": "",
         "KAFKA_CA_PATH": ""
-    }   
+    }
+
+    with open(avro_schema_file, "r") as avro_stream:
+        test_env["AVRO_MESSAGE_SCHEMA"] = avro_stream.read()
     with mock.patch.dict(os.environ, test_env, clear=True):
         yield
 
+
+@pytest.fixture()
+def test_config():
+    test_config_file = os.path.join(__location__, 'test-config.yml')
+    with open(test_config_file) as stream:
+        test_config = yaml.safe_load(stream)
+    return test_config
+
+
+@pytest.fixture()
+def avro_message():
+    avro_message_file = os.path.join(__location__, 'melding-avro.json')
+    with open(avro_message_file) as stream:
+        avro_message = json.loads(stream.read())
+    return avro_message
+
+
 @pytest.fixture()
 def register_avro():
-    avro_file_path = os.path.realpath(
-        os.path.join(os.getcwd(),
-        os.path.dirname(__file__),
-        "test.avcs")
-    )
-    
-    with(open(avro_file_path, "r")) as avro_file:
-        avro_file_contents = avro_file.read()
-
     client = SchemaRegistryClient(url=os.environ["KAFKA_SCHEMA_REGISTRY"])
-    avro_schema = schema.AvroSchema(avro_file_contents)
-    schema_id = client.register("test", avro_schema)    
+    avro_schema = schema.AvroSchema(os.environ['AVRO_MESSAGE_SCHEMA'])
+    schema_id = client.register("test", avro_schema)
     return schema_id
 
 
 @pytest.fixture()
-def register_avro_topic():
+def produce_avro_message(test_config, avro_message):
+    target = KafkaTarget(config=test_config['target'])
+    target.write_batch([avro_message])
+
+
+@pytest.fixture()
+def avro_produce(register_avro, produce_avro_message):
     pass
 
 
 @pytest.mark.integration
-def test_produce(register_avro):
-    #target = KafkaTarget()
-    assert True
-
-@pytest.fixture
-def write_to_topic():
-    producer = KafkaProducer(
-        bootstrap_servers=['kafka:9092'],
-        value_serializer=ku.json_serializer
-    )
-    message = {
-        "id": 1,
-        "verdi": "Haha",
-    }
-    future = producer.send(topic='integration-test', value=message)
-
-    # Block for 'synchronous' sends
-    try:
-        record_metadata = future.get(timeout=10)
-    except KafkaError as e:
-        print(e)
-        assert False
-
+def test_consume_avro_message(avro_produce, test_config):
+    # source = KafkaSource(test_config['source'])
+    assert False
 
 
 @pytest.fixture()

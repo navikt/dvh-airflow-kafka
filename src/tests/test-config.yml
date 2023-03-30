@@ -10,7 +10,7 @@ source:
     - topic
     - melding
 target:
-  type: asdf
+  schema: avro
   topic: test
 transform:
   - src: kafka_message
