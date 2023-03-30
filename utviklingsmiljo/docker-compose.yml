@@ -5,6 +5,11 @@ services:
     image: confluentinc/cp-zookeeper:6.2.0
     hostname: zookeeper
     container_name: zookeeper
+    healthcheck:
+      test: nc -z zookeeper 2181 || exit -1
+      interval: 3s
+      timeout: 2s
+      retries: 100
     ports:
       - "2181:2181"
     environment:
@@ -17,6 +22,11 @@ services:
     container_name: broker
     depends_on:
       - zookeeper
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "broker:9092", "--list"]
+      interval: 3s
+      timeout: 2s
+      retries: 100
     ports:
       - "29092:29092"
       - "9092:9092"
@@ -31,7 +41,25 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_JMX_PORT: 9101
-      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_JMX_HOSTNAME: localhost  
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry
+    container_name: registry
+    depends_on:
+      - broker
+    healthcheck:
+      test: ["CMD", "curl", "--output", "/dev/null", "--silent", "--head", "--fail", "http://schema-registry:8085/subjects"]
+      interval: 3s
+      timeout: 2s
+      retries: 100
+    ports:
+      - 8085:8085
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'PLAINTEXT://broker:29092'
+      SCHEMA_REGISTRY_HOST_NAME: 'schema-registry'
+      SCHEMA_REGISTRY_LISTENERS: 'http://0.0.0.0:8085'
+      SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: 'INFO'
 
   db:
     image: container-registry.oracle.com/database/express:21.3.0-xe
