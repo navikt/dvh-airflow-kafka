@@ -39,11 +39,13 @@ def mock_settings_env_vars():
         'KAFKA_BROKERS': "127.0.0.1:9092",
         "KAFKA_CERTIFICATE_PATH": "",
         "KAFKA_PRIVATE_KEY_PATH": "",
-        "KAFKA_CA_PATH": ""
+        "KAFKA_CA_PATH": "",
+        "DATA_INTERVAL_START": "1580261194785",
+        "DATA_INTERVAL_END": "1780261194785"
     }
 
-    with open(avro_schema_file, "r") as avro_stream:
-        test_env["AVRO_MESSAGE_SCHEMA"] = avro_stream.read()
+    with open(avro_schema_file, "r") as f:
+        test_env["AVRO_MESSAGE_SCHEMA"] = f.read()
     with mock.patch.dict(os.environ, test_env, clear=True):
         yield
 
@@ -59,8 +61,8 @@ def test_config():
 @pytest.fixture()
 def avro_message():
     avro_message_file = os.path.join(__location__, 'melding-avro.json')
-    with open(avro_message_file) as stream:
-        avro_message = json.loads(stream.read())
+    with open(avro_message_file) as f:
+        avro_message = json.loads(f.read())
     return avro_message
 
 
@@ -75,7 +77,12 @@ def register_avro():
 @pytest.fixture()
 def produce_avro_message(test_config, avro_message):
     target = KafkaTarget(config=test_config['target'])
-    target.write_batch([avro_message])
+    assert target.write_batch([avro_message])
+
+@pytest.fixture()
+def consume_avro_message(test_config, avro_message):
+    source = KafkaSource(config=test_config['source'])
+    return [msg for msg in source.read_batches()]
 
 
 @pytest.fixture()
@@ -84,8 +91,8 @@ def avro_produce(register_avro, produce_avro_message):
 
 
 @pytest.mark.integration
-def test_consume_avro_message(avro_produce, test_config):
-    # source = KafkaSource(test_config['source'])
+def test_consume_avro_message(produce_avro_message, consume_avro_message):
+    print(consume_avro_message[0])
     assert False
 
 

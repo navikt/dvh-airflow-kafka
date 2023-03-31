@@ -3,7 +3,7 @@ source:
   batch-size: 50
   batch-interval: 5
   topic: test
-  schema: json
+  schema: avro
   group-id: local-test
   keypath-seperator: /
   message-fields-filter:
