@@ -19,16 +19,6 @@ avro_schema_file = os.path.join(__location__, 'test.avsc')
 
 
 
-"""
-producer = KafkaProducer(
-        security_protocol="PLAINTEXT",
-        bootstrap_servers="localhost:9092",
-        key_serializer=lambda x: x.encode("utf-8"),
-        value_serializer=lambda x: json.dumps(x).encode("utf-8"),
-    )
-"""
-
-
 @pytest.fixture(autouse=True)
 def mock_settings_env_vars():
     environment.isNotLocal = False
@@ -77,7 +67,8 @@ def register_avro():
 @pytest.fixture()
 def produce_avro_message(test_config, avro_message):
     target = KafkaTarget(config=test_config['target'])
-    assert target.write_batch([avro_message])
+    target.write_batch([avro_message])
+
 
 @pytest.fixture()
 def consume_avro_message(test_config, avro_message):
@@ -91,8 +82,11 @@ def avro_produce(register_avro, produce_avro_message):
 
 
 @pytest.mark.integration
-def test_consume_avro_message(produce_avro_message, consume_avro_message):
-    print(consume_avro_message[0])
+def test_consume_avro_message(produce_avro_message, test_config, avro_message):
+    source = KafkaSource(config=test_config['source'])
+    msgs = [msg for msg in source.read_batches()]
+    last_message = msgs[-1][-1]['kafka_message']
+    print(last_message)
     assert False
 
 

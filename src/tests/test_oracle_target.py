@@ -52,6 +52,7 @@ def mock_settings_env_vars( ):
 
 @pytest.mark.unit
 def test_connection(test_config):
+    assert False
 
 
 

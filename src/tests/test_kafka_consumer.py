@@ -4,9 +4,7 @@ import os
 
 from unittest import mock
 import yaml
-import dwh_consumer.sources
-from dwh_consumer.sources import KafkaSource
-from dwh_consumer import Mapping
+from kafka_source import KafkaSource
 
 
 class LocalKafkaSource(KafkaSource):
@@ -67,12 +65,12 @@ def set_kafka_consumer(monkeypatch):
 
 @pytest.mark.integration
 def test_kafka_should_write_end_offset(test_config):
+    assert False
+    # mapping = Mapping(test_config)
+    # mapping.run(once=True)
 
-    mapping = Mapping(test_config)
-    mapping.run(once=True)
-
-    end_offsets = mapping.source.end_offsets()
-    assert mapping.target.buffer[0]["kafka_end_offset"] == end_offsets[0]
+    # end_offsets = mapping.source.end_offsets()
+    # assert mapping.target.buffer[0]["kafka_end_offset"] == end_offsets[0]
 
 
 
