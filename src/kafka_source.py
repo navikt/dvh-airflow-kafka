@@ -116,7 +116,7 @@ class KafkaSource(Source):
             "enable.auto.commit": False,
             "bootstrap.servers": os.environ["KAFKA_BROKERS"],
         },
-        if self.config['group-id']:
+        if self.config.get('group-id'):
             config['group-id'] = self.config["group-id"]
 
         if environment.isNotLocal:
