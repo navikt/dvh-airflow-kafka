@@ -112,11 +112,12 @@ class KafkaSource(Source):
 
     def _kafka_config(self) -> Dict[Text, Any]:
         config = {
-            "group.id": self.config["group-id"],
             "auto.offset.reset": "earliest",
             "enable.auto.commit": False,
             "bootstrap.servers": os.environ["KAFKA_BROKERS"],
-        }
+        },
+        if self.config['group-id']:
+            config['group-id'] = self.config["group-id"]
 
         if environment.isNotLocal:
             config.update({
