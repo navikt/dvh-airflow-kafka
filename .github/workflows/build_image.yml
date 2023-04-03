@@ -17,7 +17,7 @@ env:
 jobs:
   "build":
     name: "build"
-    runs-on: "ubuntu-18.04"
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v3.0.2
 
@@ -65,4 +65,4 @@ jobs:
           push: true
           tags: ${{ env.IMAGE }}
           cache-from: type=gha
-          cache-to: type=gha,mode=ma
+          cache-to: type=gha,mode=max
