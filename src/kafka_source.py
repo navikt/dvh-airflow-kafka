@@ -75,7 +75,7 @@ class KafkaSource(Source):
 
     def _avro_deserializer(
             self, msg: Message, schema_cache: SchemaCache = {}
-    ) -> Tuple[Dict[Text, Any], Text]:
+    ) -> Dict[Text, Any]:
         schema_id = struct.unpack(">L", msg[1:5])[0]
 
         if schema_id not in schema_cache:
@@ -97,8 +97,8 @@ class KafkaSource(Source):
         value["kafka_message"] = json.dumps(
             value, default=str, ensure_ascii=False)
         value["kafka_schema_id"] = schema_id
-        kafka_hash = hashlib.sha256(msg[5:]).hexdigest()
-        return value, kafka_hash
+        value["kafka_hash"] = hashlib.sha256(msg[5:]).hexdigest()
+        return value
 
     def _load_avro_schema(self, schema_id: int) -> avro.io.DatumReader:
         schema_registry = os.environ["KAFKA_SCHEMA_REGISTRY"]
@@ -153,7 +153,7 @@ class KafkaSource(Source):
             error_message_hash = hashlib.sha256(error_message).hexdigest()
             message["kafka_message"], message["kafka_hash"] = error_message, error_message_hash
         else:
-            message["kafka_message"], message["kafka_hash"] = self.value_deserializer(msg.value())
+            message.update(**self.value_deserializer(msg.value()))
         message["kafka_key"] = KafkaSource._key_deserializer(msg.key())
         message["kafka_timestamp"] = msg.timestamp()[1]
         message["kafka_offset"] = msg.offset()
