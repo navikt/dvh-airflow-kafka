@@ -15,6 +15,11 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    deploy:
+      resources:
+        limits:
+          cpus: '0.05'
+          memory: 50M
 
   broker:
     image: confluentinc/cp-kafka:6.2.0
@@ -41,7 +46,12 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_JMX_PORT: 9101
-      KAFKA_JMX_HOSTNAME: localhost  
+      KAFKA_JMX_HOSTNAME: localhost 
+    deploy:
+      resources:
+        limits:
+          cpus: '0.05'
+          memory: 50M
 
   schema-registry:
     image: confluentinc/cp-schema-registry
@@ -60,6 +70,11 @@ services:
       SCHEMA_REGISTRY_HOST_NAME: 'schema-registry'
       SCHEMA_REGISTRY_LISTENERS: 'http://0.0.0.0:8085'
       SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: 'INFO'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.001'
+          memory: 50M
 
   db:
     image: container-registry.oracle.com/database/express:21.3.0-xe

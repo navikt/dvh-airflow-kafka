@@ -149,7 +149,7 @@ class KafkaSource(Source):
         message = {}
         if msg.error():
             error = msg.error()
-            error_message = f"Time: {msg.timestamp()}\n Offset: {msg.offset()}\nError code: {error.code()}\nReason: {error.str()}",
+            error_message = f'Time: {msg.timestamp()}\n Offset: {msg.offset()}\nError code: {error.code()}\nReason: {error.str()}',
             error_message_hash = hashlib.sha256(error_message).hexdigest()
             message["kafka_message"], message["kafka_hash"] = error_message, error_message_hash
         else:
