@@ -27,7 +27,7 @@ jobs:
           REF: "${{github.ref}}"
         run: |
           sha=$(echo $FULL_SHA | cut -c1-7)
-          branch=$(echo {$REF:11})
+          branch=$(echo $REF | cut -c12-)
           if [ $branch = main ]
           then
               echo "IMAGE=$IMAGE_NAME:$sha" >> $GITHUB_ENV
