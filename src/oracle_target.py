@@ -7,16 +7,12 @@ import logging
 
 
 class OracleTarget(Target):
+    """Oracle Target"""
+
     connection_class = oracledb.connect
 
-    """Oracle Target"""
-    def __init__(self, config: Dict[Text, Any], connection: oracledb.connect = None) -> None:
-        super().__init__(config)
-        
-        oracledb.init_oracle_client()
-
-    def create_connection(self) -> oracledb.connect:
-        return oracledb.connect(
+    def _oracle_connection(self) -> oracledb.connect:
+        return OracleTarget.connection_class(
             user=os.environ["DB_USER"],
             password=os.environ["DB_PASSWORD"],
             dsn=os.environ["DB_DSN"],
@@ -38,8 +34,7 @@ class OracleTarget(Target):
             ]
             in_bind_names = ",".join(sequential_bind_variable_names)
 
-            bind_values = dict(
-                zip(sequential_bind_variable_names, person_identer))
+            bind_values = dict(zip(sequential_bind_variable_names, person_identer))
             bind_values.update({"timestamp": timestamp})
 
             sql = f"""
@@ -50,7 +45,7 @@ class OracleTarget(Target):
                 AND skjermet_kode IN(6,7)
             """
 
-            with self.create_connection() as con:
+            with self._oracle_connection() as con:
                 with con.cursor() as cur:
                     return cur.execute(sql, bind_values).fetchall()
         return []
@@ -64,14 +59,16 @@ class OracleTarget(Target):
                 sql = f.read()
         else:
             columns = list(batch[0].keys())
-            sql = f"insert into {table} ({','.join(columns)}, lastet_dato) select :{',:'.join(columns)}, sysdate from dual where 1=1"
+            sql = f"insert into {table} ({','.join(columns)}) select :{',:'.join(columns)} from dual where 1=1"
 
             duplicate_column = self.config.get("skip-duplicates-with")
             if duplicate_column is not None:
+                duplicate_columns = [f"{item}=:{item}" for item in duplicate_column]
+                bind_duplicate_column_names = " and ".join(duplicate_columns)
                 sql += f""" and not exists ( select null from {table} where 
-                {duplicate_column} = :{duplicate_column} )"""
+                {bind_duplicate_column_names} )"""
 
-        with self.create_connection() as con:
+        with self._oracle_connection() as con:
             try:
                 with con.cursor() as cur:
                     cur.setinputsizes(
@@ -87,6 +84,5 @@ class OracleTarget(Target):
                 logging.error(f"oracle message: {error.message}")
                 logging.error(f"oracle context: {error.context}")
                 logging.error(f"oracle sql statement: {sql}")
-                logging.error(f"oracle insert metadata: {self.metadata(batch)}")
+                logging.error(f"oracle insert data: {batch}")
                 raise
-
