@@ -26,7 +26,7 @@ class Target:
 
     def __init__(self, config: Dict[Text, Any]) -> None:
         self.config = config
-        self.connection = self.create_connection()
+        #self.connection = self.create_connection()
 
     def create_connection(self) -> object:
         raise NotImplementedError

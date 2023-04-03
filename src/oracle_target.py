@@ -15,7 +15,7 @@ class OracleTarget(Target):
         
         oracledb.init_oracle_client()
 
-    def _create_connection(self) -> oracledb.connect:
+    def create_connection(self) -> oracledb.connect:
         return oracledb.connect(
             user=os.environ["DB_USER"],
             password=os.environ["DB_PASSWORD"],
