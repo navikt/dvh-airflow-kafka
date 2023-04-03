@@ -115,7 +115,8 @@ class KafkaSource(Source):
             "auto.offset.reset": "earliest",
             "enable.auto.commit": False,
             "bootstrap.servers": os.environ["KAFKA_BROKERS"],
-        },
+        }
+        
         if self.config.get('group-id'):
             config['group-id'] = self.config["group-id"]
 
