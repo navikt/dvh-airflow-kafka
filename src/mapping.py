@@ -41,3 +41,6 @@ class Mapping:
         if environment.isNotLocal:
             with open("/airflow/xcom/return.json", "w") as xcom:
                 xcom.write(str(total_messages))
+
+    def get_start_timestamp_from_target(self):
+        return 1
