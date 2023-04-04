@@ -172,7 +172,7 @@ class KafkaSource(Source):
 
         tp_to_assign_start, tp_to_assign_end = self._prepare_partitions(offset_starts, offset_ends, consumer)
 
-        consumer.assign(list(offset_starts.values()))
+        consumer.assign(list(tp_to_assign_start.values()))
 
         while consumer.assignment():
             tpd_batch = consumer.consume(
@@ -227,5 +227,5 @@ class KafkaSource(Source):
                 end_offset = consumer.get_watermark_offsets(tp)[1]
                 tp.offset = end_offset
                 logging.info(
-                    f"Provided data_interval_end: {self.data_interval_end} exceeds that of the last message in the partition.")
+                    f"data_interval_end: {self.data_interval_end} > last message (offset: {tp.partition}) in the partition: {tp.partition}")
         return tp_to_assign_start, tp_to_assign_end
