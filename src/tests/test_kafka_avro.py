@@ -9,6 +9,7 @@ from kafka.errors import KafkaError
 from kafka_source import KafkaSource
 from kafka_target import KafkaTarget
 from unittest import mock
+from fixtures.fixtures import test_config, avro_message, mock_settings_env_vars
 
 
 @pytest.mark.integration
@@ -20,6 +21,7 @@ def test_consume_avro_message(test_config, avro_message):
     last_message_produced = avro_message
     last_message_consumed = json.loads(msgs[-1][-1]['kafka_message'])
     assert last_message_consumed == last_message_produced
+    
 
 
 @pytest.fixture()

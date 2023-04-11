@@ -3,6 +3,7 @@ import yaml
 import pytest
 import environment
 from unittest import mock
+import json
 
 __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -32,7 +33,7 @@ def mock_settings_env_vars():
 
 @pytest.fixture()
 def test_config():
-    test_config_file = os.path.join(__location__, 'test-config.yml')
+    test_config_file = os.path.join(__location__, 'kafka-configs/test-config.yml')
     with open(test_config_file) as stream:
         test_config = yaml.safe_load(stream)
     return test_config
@@ -40,7 +41,7 @@ def test_config():
 
 @pytest.fixture()
 def avro_message():
-    avro_message_file = os.path.join(__location__, 'melding-avro.json')
+    avro_message_file = os.path.join(__location__, 'kafka-messages/melding-avro.json')
     with open(avro_message_file) as f:
         avro_message = json.loads(f.read())
     return avro_message

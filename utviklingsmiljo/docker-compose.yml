@@ -24,7 +24,7 @@ services:
     depends_on:
       - zookeeper
     healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "broker:9092", "--list"]
+      test: nc -z broker 9092 || exit -1
       interval: 3s
       timeout: 2s
       retries: 100

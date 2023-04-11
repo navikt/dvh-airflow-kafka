@@ -5,6 +5,7 @@ import os
 from unittest import mock
 import yaml
 from kafka_source import KafkaSource
+from fixtures import test_config
 
 
 class LocalKafkaSource(KafkaSource):
