@@ -29,7 +29,7 @@ class Mapping:
 
     def run(self) -> None:
         total_messages = 0
-        for batch in self.source.read_batches():
+        for batch in self.source.read_polled_batches():
             total_messages += len(batch)
             k6_conf = self.target.config.get("k6-filter")
             if k6_conf:

@@ -242,7 +242,7 @@ class KafkaSource(Source):
 
         for tp in tp_to_assign_end.values():
             if tp.offset == -1:
-                end_offset = self.consumer.get_watermark_offsets(tp)[1]
+                end_offset = self.consumer.get_watermark_offsets(tp)[1] - 1
                 tp.offset = end_offset
                 logging.info(
                     (
@@ -271,8 +271,7 @@ class KafkaSource(Source):
 
         # main loop
         batch: List[Dict[Text, Any]] = []
-        empty_counter = 0
-        non_empty_counter = 0
+        empty_counter, non_empty_counter = 0, 0
         assignment_count = len(self.consumer.assignment())
         while assignment_count > 0:
 
@@ -302,21 +301,20 @@ class KafkaSource(Source):
                         assignment_count -= 1
                     else:
                         logging.error(err.str())
-                elif message.offset() > tp_to_assign_end[message.partition()].offset:
+                elif message.offset() >= tp_to_assign_end[message.partition()].offset:
                     # We are at the end
                     self.consumer.incremental_unassign(
-                        [TopicPartition(err_topic, err_partition)]
+                        [TopicPartition(message.topic(), message.partition())]
                     )
                     assignment_count -= 1
                 else:  # handle proper message
                     record = self.collect_message(message)
                     batch.append(record)
-                    if len(batch) >= batch_size:
-                        logging.info("Yielding kafka batch.")
-                        self.consumer.pause(self.consumer.assignment())
-                        yield batch
-                        batch.clear()
-                        self.consumer.resume(self.consumer.assignment())
+                if len(batch) >= batch_size or assignment_count == 0:
+                    logging.info("Yielding kafka batch.")
+
+                    yield batch
+                    batch = []
             except Exception as exc:
                 logging.error("Bailing out...")
                 self.consumer.close()
