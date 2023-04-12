@@ -11,12 +11,9 @@ import requests
 import logging
 import fastavro
 from benedict import benedict
-from confluent_kafka import (
-    Consumer, TopicPartition, Message
-)
+from confluent_kafka import Consumer, TopicPartition, Message
 from confluent_kafka.error import KafkaError
-from confluent_kafka.schema_registry\
-    import SchemaRegistryClient, SchemaRegistryError
+from confluent_kafka.schema_registry import SchemaRegistryClient, SchemaRegistryError
 from fastavro.types import Schema
 
 import environment
@@ -44,10 +41,7 @@ class KafkaSource(Source):
         un = os.environ["KAFKA_SCHEMA_REGISTRY_USER"]
         pw = os.environ["KAFKA_SCHEMA_REGISTRY_PASSWORD"]
 
-        config = {
-            "url": schema_registry,
-            "basic.auth.user.info": un + ":" + pw
-        }
+        config = {"url": schema_registry, "basic.auth.user.info": un + ":" + pw}
 
         return SchemaRegistryClient(config)
 
@@ -69,8 +63,7 @@ class KafkaSource(Source):
             return ""
         return x.decode("utf-8")
 
-    def _json_deserializer(self, message_value: bytes) -> \
-            Tuple[Dict[Text, Any], Text]:
+    def _json_deserializer(self, message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
         if message_value is None:
             return benedict(dict(kafka_hash=None, kafka_message=None))
         message = json.loads(message_value.decode("UTF-8"))
@@ -83,22 +76,19 @@ class KafkaSource(Source):
         dictionary.remove(filter_config)
 
         kafka_hash = hashlib.sha256(message_value).hexdigest()
-        kafka_message = json.dumps(dictionary, ensure_ascii=True).encode(
-            "UTF-8"
-        )
+        kafka_message = json.dumps(dictionary, ensure_ascii=True).encode("UTF-8")
         return kafka_hash, kafka_message
 
     @staticmethod
     def _string_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
         dictionary = dict(
-            kafka_message=json.dumps(
-                x.decode("UTF-8"), default=str, ensure_ascii=False)
+            kafka_message=json.dumps(x.decode("UTF-8"), default=str, ensure_ascii=False)
         )
         kafka_hash = hashlib.sha256(x).hexdigest()
         return dictionary, kafka_hash
 
     def _avro_deserializer(
-            self, msg: Message, schema_cache: SchemaCache = {}
+        self, msg: Message, schema_cache: SchemaCache = {}
     ) -> Dict[Text, Any]:
         schema_id = struct.unpack(">L", msg[1:5])[0]
 
@@ -118,8 +108,7 @@ class KafkaSource(Source):
         if filter_config is not None:
             value.remove(filter_config)
 
-        value["kafka_message"] = json.dumps(
-            value, default=str, ensure_ascii=False)
+        value["kafka_message"] = json.dumps(value, default=str, ensure_ascii=False)
         value["kafka_schema_id"] = schema_id
         value["kafka_hash"] = hashlib.sha256(msg[5:]).hexdigest()
         return value
@@ -139,39 +128,32 @@ class KafkaSource(Source):
             "auto.offset.reset": "earliest",
             "enable.auto.commit": False,
             "bootstrap.servers": os.environ["KAFKA_BROKERS"],
-            "group.id": 'test'
+            "group.id": "test",
         }
 
         if environment.isNotLocal:
-            config.update({
-                "ssl.certificate.location": os.environ["KAFKA_CERTIFICATE_PATH"],
-                "ssl.key.location": os.environ["KAFKA_PRIVATE_KEY_PATH"],
-                "ssl.ca.location": os.environ["KAFKA_CA_PATH"],
-                "security.protocol": "SSL",
-            })
+            config.update(
+                {
+                    "ssl.certificate.location": os.environ["KAFKA_CERTIFICATE_PATH"],
+                    "ssl.key.location": os.environ["KAFKA_PRIVATE_KEY_PATH"],
+                    "ssl.ca.location": os.environ["KAFKA_CA_PATH"],
+                    "security.protocol": "SSL",
+                }
+            )
         return config
 
     def seek_to_timestamp(self, ts: int) -> Dict[int, TopicPartition]:
-        topic_metadata = \
-            self.consumer.list_topics().topics[self.config["topic"]]
+        topic_metadata = self.consumer.list_topics().topics[self.config["topic"]]
 
         tp_with_timestamp_as_offset = [
-            TopicPartition(
-                topic=self.config["topic"],
-                partition=k,
-                offset=ts)
+            TopicPartition(topic=self.config["topic"], partition=k, offset=ts)
             for k in topic_metadata.partitions.keys()
         ]
 
-        topic_partitions = self.consumer.offsets_for_times(
-            tp_with_timestamp_as_offset
-        )
+        topic_partitions = self.consumer.offsets_for_times(tp_with_timestamp_as_offset)
         return {tp.partition: tp for tp in topic_partitions}
 
-    def unassign_if_assigned(
-            self,
-            consumer: Consumer,
-            tp: TopicPartition) -> None:
+    def unassign_if_assigned(self, consumer: Consumer, tp: TopicPartition) -> None:
         if tp in consumer.assignment():
             consumer.incremental_unassign([tp])
 
@@ -180,14 +162,18 @@ class KafkaSource(Source):
         if msg.error():
             error = msg.error()
             error_message = (
-                f'Time: {msg.timestamp()}\n'
-                f'Offset: {msg.offset()}\n'
-                f'Error code: {error.code()}\n'
-                f'Reason: {error.str()}'
-            ),
+                (
+                    f"Time: {msg.timestamp()}\n"
+                    f"Offset: {msg.offset()}\n"
+                    f"Error code: {error.code()}\n"
+                    f"Reason: {error.str()}"
+                ),
+            )
             error_message_hash = hashlib.sha256(error_message).hexdigest()
-            message["kafka_message"], message["kafka_hash"] = \
-                error_message, error_message_hash
+            message["kafka_message"], message["kafka_hash"] = (
+                error_message,
+                error_message_hash,
+            )
         else:
             message.update(**self.value_deserializer(msg.value()))
         message["kafka_key"] = KafkaSource._key_deserializer(msg.key())
@@ -201,66 +187,56 @@ class KafkaSource(Source):
         logging.info(f"data_interval_start: {self.data_interval_start}")
         logging.info(f"data_interval_stop: {self.data_interval_end}")
 
-        tp_to_assign_start, tp_to_assign_end = \
-            self._prepare_partitions()
+        tp_to_assign_start, tp_to_assign_end = self._prepare_partitions()
 
         self.consumer.assign(list(tp_to_assign_start.values()))
 
         while self.consumer.assignment():
             tpd_batch = self.consumer.consume(
                 num_messages=self.config["batch-size"],
-                timeout=self.config["batch-interval"]
+                timeout=self.config["batch-interval"],
             )
 
-            batch: List[Dict] = [
-                self.collect_message(msg)
-                for msg in tpd_batch
-            ]
+            batch: List[Dict] = [self.collect_message(msg) for msg in tpd_batch]
             for msg in batch:
                 if msg["kafka_offset"] % 500 == 0:
-                    logging.info(
-                        f'Current kafka_offset: {msg["kafka_offset"]}'
-                    )
+                    logging.info(f'Current kafka_offset: {msg["kafka_offset"]}')
                 tp = TopicPartition(
-                    msg["kafka_topic"],
-                    msg["kafka_partition"],
-                    msg["kafka_offset"]
+                    msg["kafka_topic"], msg["kafka_partition"], msg["kafka_offset"]
                 )
 
                 end_offset = tp_to_assign_end[tp.partition].offset - 1
                 if msg["kafka_timestamp"] >= self.data_interval_end:
                     self.unassign_if_assigned(self.consumer, tp)
-                    logging.info((
-                        f"TopicPartition: {tp} is done on offset: {tp.offset} "
-                        f"with timestamp: {msg['kafka_timestamp']}"
-                    ))
+                    logging.info(
+                        (
+                            f"TopicPartition: {tp} is done on offset: {tp.offset} "
+                            f"with timestamp: {msg['kafka_timestamp']}"
+                        )
+                    )
 
                 if tp.offset == end_offset:
                     self.unassign_if_assigned(self.consumer, tp)
-                    logging.info((
-                        f"TopicPartition: {tp} is done on offset: "
-                        f"{tp.offset} because it's reached the end"
-                    ))
+                    logging.info(
+                        (
+                            f"TopicPartition: {tp} is done on offset: "
+                            f"{tp.offset} because it's reached the end"
+                        )
+                    )
 
             batch_filtered = [
-                msg for msg in batch
-                if msg["kafka_timestamp"] < self.data_interval_end
+                msg for msg in batch if msg["kafka_timestamp"] < self.data_interval_end
             ]
 
             if len(batch_filtered) > 0:
                 yield batch_filtered
 
-    def _prepare_partitions(self)\
-            -> Tuple[Dict[int, TopicPartition], Dict[int, TopicPartition]]:
+    def _prepare_partitions(
+        self,
+    ) -> Tuple[Dict[int, TopicPartition], Dict[int, TopicPartition]]:
 
-        offset_starts = self.seek_to_timestamp(
-            self.consumer,
-            self.data_interval_start
-        )
-        offset_ends = self.seek_to_timestamp(
-            self.consumer,
-            self.data_interval_end
-        )
+        offset_starts = self.seek_to_timestamp(self.data_interval_start)
+        offset_ends = self.seek_to_timestamp(self.data_interval_end)
 
         tp_to_assign_start = {}
         tp_to_assign_end = {}
@@ -275,10 +251,7 @@ class KafkaSource(Source):
                 )
             else:
                 logging.info(
-                    (
-                        f"Start consuming on offset for "
-                        f"{tp.partition}: {tp.offset}"
-                    )
+                    (f"Start consuming on offset for " f"{tp.partition}: {tp.offset}")
                 )
                 tp_to_assign_start[tp.partition] = tp
                 tp_to_assign_end[tp.partition] = offset_ends[tp.partition]
@@ -287,16 +260,16 @@ class KafkaSource(Source):
             if tp.offset == -1:
                 end_offset = self.consumer.get_watermark_offsets(tp)[1]
                 tp.offset = end_offset
-                logging.info((
-                    f"data_interval_end: {self.data_interval_end} "
-                    f"> last message (offset: {tp.partition}) "
-                    f"in the partition: {tp.partition}"
-                ))
+                logging.info(
+                    (
+                        f"data_interval_end: {self.data_interval_end} "
+                        f"> last message (offset: {tp.partition}) "
+                        f"in the partition: {tp.partition}"
+                    )
+                )
         return tp_to_assign_start, tp_to_assign_end
 
-    def read_polled_batches(
-        self
-    ) -> Generator[List[Dict[Text, Any]], None, None]:
+    def read_polled_batches(self) -> Generator[List[Dict[Text, Any]], None, None]:
         """
         reads messages from topic beginning (or end)
         or from custom offsets (silently ignored for non-existing partitions)
@@ -307,8 +280,7 @@ class KafkaSource(Source):
         if self.config["schema"] == "avro":
             self._cached_confluent_schemas = self.find_all_schemas()
 
-        tp_to_assign_start, tp_to_assign_end = \
-            self._prepare_partitions()
+        tp_to_assign_start, tp_to_assign_end = self._prepare_partitions()
 
         topic_partitions = list(tp_to_assign_start.values())
 
@@ -336,18 +308,19 @@ class KafkaSource(Source):
                     if err.code() == KafkaError._PARTITION_EOF:
                         err_topic = message.topic()
                         err_partition = message.partition()
-                        assert err_topic is not None, \
-                            "Topic missing in EOF sentinel object"
-                        assert err_partition is not None, \
-                            "Partition missing in EOF sentinel object"
+                        assert (
+                            err_topic is not None
+                        ), "Topic missing in EOF sentinel object"
+                        assert (
+                            err_partition is not None
+                        ), "Partition missing in EOF sentinel object"
                         self.consumer.incremental_unassign(
                             [TopicPartition(err_topic, err_partition)]
                         )
                         assignment_count -= 1
                     else:
                         logging.error(err.str())
-                elif message.offset() > \
-                        tp_to_assign_end[message.partition()].offset:
+                elif message.offset() > tp_to_assign_end[message.partition()].offset:
                     # We are at the end
                     self.consumer.incremental_unassign(
                         [TopicPartition(err_topic, err_partition)]
@@ -381,12 +354,10 @@ class KafkaSource(Source):
         for field in ("key", "value"):
             try:
                 subject = self.config["topic"] + "-" + field
-                versions: list[int] = \
-                    self.schema_registry_client.get_versions(subject)
+                versions: list[int] = self._schema_registry_client.get_versions(subject)
                 for version in versions:
-                    version_info = self.schema_registry_client.get_version(
-                        subject,
-                        version
+                    version_info = self._schema_registry_client.get_version(
+                        subject, version
                     )
                     schema_id: int = version_info.schema_id
                     parsed_schema = self.get_schema_from_id(schema_id)
@@ -394,12 +365,13 @@ class KafkaSource(Source):
             except SchemaRegistryError as exc:
                 assert exc.error_code in (
                     _CONFLUENT_SUBJECT_NOT_FOUND,
-                    _CONFLUENT_VERSION_NOT_FOUND)
+                    _CONFLUENT_VERSION_NOT_FOUND,
+                )
                 continue
         return schema_lkp
 
     def get_schema_from_id(self, schema_id: int) -> Schema:
-        """returns the fastavro parsed schema from the global registry id """
+        """returns the fastavro parsed schema from the global registry id"""
         schema = self.schema_registry_client.get_schema(schema_id)
         parsed_schema = fastavro.parse_schema(json.loads(schema.schema_str))
         return parsed_schema
