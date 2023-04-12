@@ -4,18 +4,13 @@ import json
 import os
 import struct
 from typing import Generator, Dict, Text, Any, Tuple, List, Optional
-
 import avro.schema
 import avro.io
 import requests
 import logging
-import fastavro
 from benedict import benedict
 from confluent_kafka import Consumer, TopicPartition, Message
 from confluent_kafka.error import KafkaError
-from confluent_kafka.schema_registry import SchemaRegistryClient, SchemaRegistryError
-from fastavro.types import Schema
-
 import environment
 from base import Source
 
@@ -33,17 +28,7 @@ class KafkaSource(Source):
         self.value_deserializer = self._set_value_deserializer()
         self.data_interval_start: int = int(os.environ["DATA_INTERVAL_START"])
         self.data_interval_end: int = int(os.environ["DATA_INTERVAL_END"])
-        self.schema_registry_client = self._schema_registry_client()
         self.consumer = Consumer(self._kafka_config())
-
-    def _schema_registry_client(self):
-        schema_registry = os.environ["KAFKA_SCHEMA_REGISTRY"]
-        un = os.environ["KAFKA_SCHEMA_REGISTRY_USER"]
-        pw = os.environ["KAFKA_SCHEMA_REGISTRY_PASSWORD"]
-
-        config = {"url": schema_registry, "basic.auth.user.info": un + ":" + pw}
-
-        return SchemaRegistryClient(config)
 
     def _set_value_deserializer(self):
         if self.config["schema"] == "avro":
@@ -127,7 +112,7 @@ class KafkaSource(Source):
             "auto.offset.reset": "earliest",
             "enable.auto.commit": False,
             "bootstrap.servers": os.environ["KAFKA_BROKERS"],
-            "group.id": "test",
+            "group.id": self.config["group-id"],
         }
 
         if environment.isNotLocal:
