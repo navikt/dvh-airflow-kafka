@@ -310,7 +310,9 @@ class KafkaSource(Source):
                 else:  # handle proper message
                     record = self.collect_message(message)
                     batch.append(record)
-                if len(batch) >= batch_size or assignment_count == 0:
+                if (len(batch) >= batch_size or assignment_count == 0) and len(
+                    batch
+                ) > 0:
                     logging.info("Yielding kafka batch.")
 
                     yield batch
