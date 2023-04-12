@@ -36,7 +36,7 @@ class KafkaSource(Source):
         self.value_deserializer = self._set_value_deserializer()
         self.data_interval_start: int = int(os.environ["DATA_INTERVAL_START"])
         self.data_interval_end: int = int(os.environ["DATA_INTERVAL_END"])
-        self._schema_registry_client = self._schema_registry_client()
+        self.schema_registry_client = self._schema_registry_client()
         self.consumer = Consumer(self._kafka_config())
 
     def _schema_registry_client(self):
@@ -382,9 +382,9 @@ class KafkaSource(Source):
             try:
                 subject = self.config["topic"] + "-" + field
                 versions: list[int] = \
-                    self._schema_registry_client.get_versions(subject)
+                    self.schema_registry_client.get_versions(subject)
                 for version in versions:
-                    version_info = self._schema_registry_client.get_version(
+                    version_info = self.schema_registry_client.get_version(
                         subject,
                         version
                     )
@@ -399,7 +399,7 @@ class KafkaSource(Source):
         return schema_lkp
 
     def get_schema_from_id(self, schema_id: int) -> Schema:
-        """returns the fastavro parsed schema from the global registry id"""
-        schema = self._schema_registry_client.get_schema(schema_id)
+        """returns the fastavro parsed schema from the global registry id """
+        schema = self.schema_registry_client.get_schema(schema_id)
         parsed_schema = fastavro.parse_schema(json.loads(schema.schema_str))
         return parsed_schema
