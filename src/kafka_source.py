@@ -48,6 +48,7 @@ class KafkaSource(Source):
     def _set_value_deserializer(self):
         if self.config["schema"] == "avro":
             value_deserializer = self._avro_deserializer
+            self.schema_cache: SchemaCache = {}
         elif self.config["schema"] == "json":
             value_deserializer = self._json_deserializer
         elif self.config["schema"] == "string":
@@ -87,17 +88,15 @@ class KafkaSource(Source):
         kafka_hash = hashlib.sha256(x).hexdigest()
         return dictionary, kafka_hash
 
-    def _avro_deserializer(
-        self, msg: Message, schema_cache: SchemaCache = {}
-    ) -> Dict[Text, Any]:
+    def _avro_deserializer(self, msg: Message) -> Dict[Text, Any]:
         schema_id = struct.unpack(">L", msg[1:5])[0]
 
-        if schema_id not in schema_cache:
-            schema_cache[schema_id] = self._load_avro_schema(schema_id)
+        if schema_id not in self.schema_cache:
+            self.schema_cache[schema_id] = self._load_avro_schema(schema_id)
 
         reader = io.BytesIO(msg[5:])
         decoder = avro.io.BinaryDecoder(reader)
-        value = schema_cache[schema_id].read(decoder)
+        value = self.schema_cache[schema_id].read(decoder)
         value = benedict(value)
 
         separator = self.config.get("keypath-seperator")
@@ -277,8 +276,6 @@ class KafkaSource(Source):
 
         batch_size = self.config["batch-size"]
         # try to cache all before message loop
-        if self.config["schema"] == "avro":
-            self._cached_confluent_schemas = self.find_all_schemas()
 
         tp_to_assign_start, tp_to_assign_end = self._prepare_partitions()
 
@@ -343,35 +340,3 @@ class KafkaSource(Source):
         logging.info(f"Completed with {non_empty_counter} events consumed")
         if empty_counter > 0:
             logging.warning(f"found {empty_counter} empty messages")
-
-    def find_all_schemas(self) -> dict[int, Schema]:
-        """
-        returns a dictionary, possibly empty, of all registered
-        key/value schemas for this topic. The returned schemas are
-        parsed for use with fastavro before returning.
-        """
-        schema_lkp: dict[int, Schema] = {}
-        for field in ("key", "value"):
-            try:
-                subject = self.config["topic"] + "-" + field
-                versions: list[int] = self._schema_registry_client.get_versions(subject)
-                for version in versions:
-                    version_info = self._schema_registry_client.get_version(
-                        subject, version
-                    )
-                    schema_id: int = version_info.schema_id
-                    parsed_schema = self.get_schema_from_id(schema_id)
-                    schema_lkp[schema_id] = parsed_schema
-            except SchemaRegistryError as exc:
-                assert exc.error_code in (
-                    _CONFLUENT_SUBJECT_NOT_FOUND,
-                    _CONFLUENT_VERSION_NOT_FOUND,
-                )
-                continue
-        return schema_lkp
-
-    def get_schema_from_id(self, schema_id: int) -> Schema:
-        """returns the fastavro parsed schema from the global registry id"""
-        schema = self.schema_registry_client.get_schema(schema_id)
-        parsed_schema = fastavro.parse_schema(json.loads(schema.schema_str))
-        return parsed_schema
