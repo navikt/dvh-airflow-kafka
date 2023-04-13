@@ -4,7 +4,7 @@ from kafka_source import KafkaSource
 from oracle_target import OracleTarget
 from transform import Transform
 from mapping import Mapping
-from fixtures import test_config
+from fixtures.fixtures import test_config
 
 
 @pytest.fixture
