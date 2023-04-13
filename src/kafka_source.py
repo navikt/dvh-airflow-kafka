@@ -142,29 +142,14 @@ class KafkaSource(Source):
             consumer.incremental_unassign([tp])
 
     def collect_message(self, msg: Message) -> Dict[Text, Any]:
-        message = {}
-        if msg.error():
-            error = msg.error()
-            error_message = (
-                (
-                    f"Time: {msg.timestamp()}\n"
-                    f"Offset: {msg.offset()}\n"
-                    f"Error code: {error.code()}\n"
-                    f"Reason: {error.str()}"
-                ),
-            )
-            error_message_hash = hashlib.sha256(error_message).hexdigest()
-            message["kafka_message"], message["kafka_hash"] = (
-                error_message,
-                error_message_hash,
-            )
-        else:
-            message.update(**self.value_deserializer(msg.value()))
-        message["kafka_key"] = KafkaSource._key_deserializer(msg.key())
-        message["kafka_timestamp"] = msg.timestamp()[1]
-        message["kafka_offset"] = msg.offset()
-        message["kafka_partition"] = msg.partition()
-        message["kafka_topic"] = msg.topic()
+        message = {
+            "kafka_key": KafkaSource._key_deserializer(msg.key()),
+            "kafka_timestamp": msg.timestamp()[1],
+            "kafka_offset": msg.offset(),
+            "kafka_partition": msg.partition(),
+            "kafka_topic": msg.topic(),
+            **self.value_deserializer(msg.value()),
+        }
         return message
 
     def read_batches(self) -> Generator[List[Dict[Text, Any]], None, None]:
@@ -218,7 +203,6 @@ class KafkaSource(Source):
     def _prepare_partitions(
         self,
     ) -> Tuple[Dict[int, TopicPartition], Dict[int, TopicPartition]]:
-
         offset_starts = self.seek_to_timestamp(self.data_interval_start)
         offset_ends = self.seek_to_timestamp(self.data_interval_end)
 
@@ -260,12 +244,8 @@ class KafkaSource(Source):
         """
 
         batch_size = self.config["batch-size"]
-        # try to cache all before message loop
-
         tp_to_assign_start, tp_to_assign_end = self._prepare_partitions()
-
         topic_partitions = list(tp_to_assign_start.values())
-
         self.consumer.assign(topic_partitions)
         logging.info(f"Assigned to {self.consumer.assignment()}.")
 
@@ -274,7 +254,6 @@ class KafkaSource(Source):
         empty_counter, non_empty_counter = 0, 0
         assignment_count = len(self.consumer.assignment())
         while assignment_count > 0:
-
             message: Message | None = self.consumer.poll(timeout=10)
             if message is None:
                 empty_counter += 1
@@ -307,6 +286,7 @@ class KafkaSource(Source):
                         [TopicPartition(message.topic(), message.partition())]
                     )
                     assignment_count -= 1
+
                 else:  # handle proper message
                     record = self.collect_message(message)
                     batch.append(record)
@@ -322,6 +302,7 @@ class KafkaSource(Source):
                 self.consumer.close()
                 yield batch
                 raise exc
+
         logging.info(f"Completed with {non_empty_counter} events consumed")
         if empty_counter > 0:
             logging.warning(f"found {empty_counter} empty messages")

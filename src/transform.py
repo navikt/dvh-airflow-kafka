@@ -165,7 +165,7 @@ class Transform:
         """
 
         transformed_message = dict()
-        batch_time = datetime.today()
+        batch_time = datetime_to_datetime_no(datetime.today())
 
         for rule in self.rules:
             if rule.src[:2] == "$$":
