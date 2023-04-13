@@ -1,6 +1,25 @@
 import pytest
-import hashlib
 from kafka_source import KafkaSource
+
+
+from fixtures.fixtures import test_config, mock_settings_env_vars
+
+
+@pytest.fixture
+def kafka_source(test_config, mock_settings_env_vars):
+    return KafkaSource(test_config["source"])
+
+
+@pytest.mark.integration
+def test_seek_to_timestamp_infinty_should_return_offset_minus_1(kafka_source):
+    tp = kafka_source.seek_to_timestamp(1981317520000)[0]
+    assert tp.offset == - 1
+
+
+@pytest.mark.integration
+def test_seek_to_timestamp_0_should_return_offset_0(kafka_source):
+    tp = kafka_source.seek_to_timestamp(0)[0]
+    assert tp.offset == 0
 
 
 @pytest.mark.unit
