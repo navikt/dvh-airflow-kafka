@@ -26,8 +26,6 @@ class KafkaSource(Source):
     def __init__(self, config: Dict[Text, Any]) -> None:
         super().__init__(config)
         self.value_deserializer = self._set_value_deserializer()
-        self.data_interval_start: int = int(os.environ["DATA_INTERVAL_START"])
-        self.data_interval_end: int = int(os.environ["DATA_INTERVAL_END"])
         self.consumer = Consumer(self._kafka_config())
 
     def _set_value_deserializer(self):
@@ -42,6 +40,12 @@ class KafkaSource(Source):
             raise AssertionError
 
         return value_deserializer
+
+    def set_data_intervals(self) -> None:
+        self.data_interval_start: int = int(os.environ["DATA_INTERVAL_START"])
+        self.data_interval_end: int = int(os.environ["DATA_INTERVAL_END"])
+        logging.info(f"data_interval_start: {self.data_interval_start}")
+        logging.info(f"data_interval_stop: {self.data_interval_end}")
 
     @staticmethod
     def _key_deserializer(x: Optional[bytes]) -> Text:
@@ -153,9 +157,6 @@ class KafkaSource(Source):
         return message
 
     def read_batches(self) -> Generator[List[Dict[Text, Any]], None, None]:
-        logging.info(f"data_interval_start: {self.data_interval_start}")
-        logging.info(f"data_interval_stop: {self.data_interval_end}")
-
         tp_to_assign_start, tp_to_assign_end = self._prepare_partitions()
 
         self.consumer.assign(list(tp_to_assign_start.values()))
@@ -203,6 +204,7 @@ class KafkaSource(Source):
     def _prepare_partitions(
         self,
     ) -> Tuple[Dict[int, TopicPartition], Dict[int, TopicPartition]]:
+        self.set_data_intervals()
         offset_starts = self.seek_to_timestamp(self.data_interval_start)
         offset_ends = self.seek_to_timestamp(self.data_interval_end)
 

@@ -16,25 +16,27 @@ import json
 
 
 def set_secrets_as_envs():
-    resource_name = os.environ.get(
-        'PROJECT_SECRET_PATH') or f"{os.environ['KNADA_TEAM_SECRET']}/versions/latest"
+    resource_name = (
+        os.environ.get("PROJECT_SECRET_PATH")
+        or f"{os.environ['KNADA_TEAM_SECRET']}/versions/latest"
+    )
     secrets = secretmanager.SecretManagerServiceClient()
     secret = secrets.access_secret_version(name=resource_name)
-    secret_str = secret.payload.data.decode('UTF-8')
+    secret_str = secret.payload.data.decode("UTF-8")
     secrets = json.loads(secret_str)
     os.environ.update(secrets)
 
-    os.environ['KAFKA_CA_PATH'] = './kafka_ca_file'
-    with open(os.getenv('KAFKA_CA_PATH'), 'w') as fil:
-        fil.write(os.getenv('KAFKA_CA'))
+    os.environ["KAFKA_CA_PATH"] = "./kafka_ca_file"
+    with open(os.getenv("KAFKA_CA_PATH"), "w") as fil:
+        fil.write(os.getenv("KAFKA_CA"))
 
-    os.environ['KAFKA_CERTIFICATE_PATH'] = './kafka_certificate_file'
-    with open(os.getenv('KAFKA_CERTIFICATE_PATH'), 'w') as fil:
-        fil.write(os.getenv('KAFKA_CERTIFICATE'))
+    os.environ["KAFKA_CERTIFICATE_PATH"] = "./kafka_certificate_file"
+    with open(os.getenv("KAFKA_CERTIFICATE_PATH"), "w") as fil:
+        fil.write(os.getenv("KAFKA_CERTIFICATE"))
 
-    os.environ['KAFKA_PRIVATE_KEY_PATH'] = './kafka_private_key_file'
-    with open(os.getenv('KAFKA_PRIVATE_KEY_PATH'), 'w') as fil:
-        fil.write(os.getenv('KAFKA_PRIVATE_KEY'))
+    os.environ["KAFKA_PRIVATE_KEY_PATH"] = "./kafka_private_key_file"
+    with open(os.getenv("KAFKA_PRIVATE_KEY_PATH"), "w") as fil:
+        fil.write(os.getenv("KAFKA_PRIVATE_KEY"))
 
 
 parser = ArgumentParser()

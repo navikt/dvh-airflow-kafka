@@ -4,12 +4,18 @@ import oracledb
 from base import Target
 from transform import int_ms_to_date
 import logging
+import pytz
 
 
 class OracleTarget(Target):
     """Oracle Target"""
 
     connection_class = oracledb.connect
+
+    def __init__(self, config: Dict[Text, Any]) -> None:
+        super().__init__(config)
+        if self.config.get("delta"):
+            os.environ["DATA_INTERVAL_START"] = self.get_latest_timestamp_for_delta()
 
     def _oracle_connection(self) -> oracledb.connect:
         return OracleTarget.connection_class(
@@ -19,6 +25,21 @@ class OracleTarget(Target):
             encoding="utf-8",
             nencoding="utf-8",
         )
+
+    def get_latest_timestamp_for_delta(self):
+        delta_column = self.config["delta"]["column"]
+        delta_table = self.config["delta"].get("table") or self.config["table"]
+        with self._oracle_connection() as con:
+            with con.cursor() as cur:
+                cur.execute(f"select max({delta_column}) from {delta_table}")
+                dt = cur.fetchone()[0]
+        if not dt:
+            return "0"
+        norwegian_tz = pytz.timezone("Europe/Oslo")
+        localized_dt = norwegian_tz.localize(dt)
+        utc_dt = localized_dt.astimezone(pytz.UTC)
+        utc_timestamp_ms = str(int(utc_dt.timestamp() * 1000))
+        return utc_timestamp_ms
 
     def get_kode67(self, batch: List[Dict[Text, Any]]) -> List[Tuple]:
         k6_conf = self.config.get("k6-filter")
