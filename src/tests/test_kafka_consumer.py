@@ -61,13 +61,3 @@ def build_test_source(source_config: Dict):
 @pytest.fixture(autouse=True)
 def set_kafka_consumer(monkeypatch):
     monkeypatch.setattr('dwh_consumer.mapping.build_source', build_test_source)
-
-
-@pytest.mark.integration
-def test_kafka_should_write_end_offset(test_config):
-    assert False
-    # mapping = Mapping(test_config)
-    # mapping.run(once=True)
-
-    # end_offsets = mapping.source.end_offsets()
-    # assert mapping.target.buffer[0]["kafka_end_offset"] == end_offsets[0]

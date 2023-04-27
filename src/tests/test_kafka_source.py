@@ -1,8 +1,9 @@
 import pytest
 from kafka_source import KafkaSource
+from benedict import benedict
 
 
-from fixtures.fixtures import test_config, mock_settings_env_vars
+from fixtures.fixtures import test_config, mock_settings_env_vars, test_config_json
 
 
 @pytest.fixture
@@ -39,13 +40,14 @@ def test_string_deserializer():
 
 
 @pytest.mark.unit
-def test_json_deserializer():
+def test_json_deserializer(test_config_json):
     x = "{\"x\": \"x\"}".encode("utf-8")
-    y = {"kafka_message": "{\"x\": \"x\"}", "x": "x"}
-    assert KafkaSource._json_deserializer(x) == (
-        y,
-        "ed298bd5a15cbb33bc4b86650cda3376babf454119b172e107b7ac2e32f69789",
-    )
+    src = KafkaSource(test_config_json["source"])
+    deserialized = src._json_deserializer(x)
+
+    assert deserialized["kafka_hash"] == "ed298bd5a15cbb33bc4b86650cda3376babf454119b172e107b7ac2e32f69789"
+    assert deserialized["kafka_message"] == x
+    assert deserialized["x"] == "x"
 
 
 @pytest.mark.unit

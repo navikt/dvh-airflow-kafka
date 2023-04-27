@@ -43,6 +43,15 @@ def test_config():
 
 
 @pytest.fixture()
+def test_config_json():
+    test_config_file = os.path.join(
+        __location__, 'kafka-configs/test-config_json.yml')
+    with open(test_config_file) as stream:
+        test_config = yaml.safe_load(stream)
+    return test_config
+
+
+@pytest.fixture()
 def register_avro():
     avro_file_path = os.path.realpath(
         os.path.join(__location__, "test.avsc")

@@ -26,7 +26,6 @@ class KafkaSource(Source):
     def __init__(self, config: Dict[Text, Any]) -> None:
         super().__init__(config)
         self.value_deserializer = self._set_value_deserializer()
-        self.consumer = Consumer(self._kafka_config())
 
     def _set_value_deserializer(self):
         if self.config["schema"] == "avro":
@@ -53,7 +52,7 @@ class KafkaSource(Source):
             return ""
         return x.decode("utf-8")
 
-    def _json_deserializer(self, message_value: bytes) -> Tuple[Dict[Text, Any], Text]:
+    def _json_deserializer(self, message_value: bytes) -> Dict[Text, Any]:
         if message_value is None:
             return benedict(dict(kafka_hash=None, kafka_message=None))
         message = json.loads(message_value.decode("UTF-8"))
@@ -66,8 +65,12 @@ class KafkaSource(Source):
         dictionary.remove(filter_config)
 
         kafka_hash = hashlib.sha256(message_value).hexdigest()
-        kafka_message = json.dumps(dictionary, ensure_ascii=True).encode("UTF-8")
-        return kafka_hash, kafka_message
+        kafka_message = json.dumps(
+            dictionary, ensure_ascii=True).encode("UTF-8")
+
+        dictionary["kafka_message"] = kafka_message
+        dictionary["kafka_hash"] = kafka_hash
+        return dictionary
 
     @staticmethod
     def _string_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
@@ -199,7 +202,7 @@ class KafkaSource(Source):
         reads messages from topic beginning (or end)
         or from custom offsets (silently ignored for non-existing partitions)
         """
-
+        self.consumer = Consumer(self._kafka_config())
         batch_size = self.config["batch-size"]
         tp_to_assign_start, tp_to_assign_end = self._prepare_partitions()
         topic_partitions = list(tp_to_assign_start.values())
