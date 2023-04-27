@@ -122,9 +122,9 @@ class KafkaSource(Source):
         if environment.isNotLocal:
             config.update(
                 {
-                    "ssl.certificate.location": os.environ["KAFKA_CERTIFICATE_PATH"],
-                    "ssl.key.location": os.environ["KAFKA_PRIVATE_KEY_PATH"],
-                    "ssl.ca.location": os.environ["KAFKA_CA_PATH"],
+                    "ssl.certificate.pem": os.environ["KAFKA_CERTIFICATE"],
+                    "ssl.key.pem": os.environ["KAFKA_PRIVATE_KEY"],
+                    "ssl.ca.pem": os.environ["KAFKA_CA"],
                     "security.protocol": "SSL",
                 }
             )
@@ -155,51 +155,6 @@ class KafkaSource(Source):
             **self.value_deserializer(msg.value()),
         }
         return message
-
-    def read_batches(self) -> Generator[List[Dict[Text, Any]], None, None]:
-        tp_to_assign_start, tp_to_assign_end = self._prepare_partitions()
-
-        self.consumer.assign(list(tp_to_assign_start.values()))
-
-        while self.consumer.assignment():
-            tpd_batch = self.consumer.consume(
-                num_messages=self.config["batch-size"],
-                timeout=self.config["batch-interval"],
-            )
-
-            batch: List[Dict] = [self.collect_message(msg) for msg in tpd_batch]
-            for msg in batch:
-                if msg["kafka_offset"] % 500 == 0:
-                    logging.info(f'Current kafka_offset: {msg["kafka_offset"]}')
-                tp = TopicPartition(
-                    msg["kafka_topic"], msg["kafka_partition"], msg["kafka_offset"]
-                )
-
-                end_offset = tp_to_assign_end[tp.partition].offset - 1
-                if msg["kafka_timestamp"] >= self.data_interval_end:
-                    self.unassign_if_assigned(self.consumer, tp)
-                    logging.info(
-                        (
-                            f"TopicPartition: {tp} is done on offset: {tp.offset} "
-                            f"with timestamp: {msg['kafka_timestamp']}"
-                        )
-                    )
-
-                if tp.offset == end_offset:
-                    self.unassign_if_assigned(self.consumer, tp)
-                    logging.info(
-                        (
-                            f"TopicPartition: {tp} is done on offset: "
-                            f"{tp.offset} because it's reached the end"
-                        )
-                    )
-
-            batch_filtered = [
-                msg for msg in batch if msg["kafka_timestamp"] < self.data_interval_end
-            ]
-
-            if len(batch_filtered) > 0:
-                yield batch_filtered
 
     def _prepare_partitions(
         self,
