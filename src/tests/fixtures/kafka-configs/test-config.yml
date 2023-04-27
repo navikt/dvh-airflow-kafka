@@ -2,16 +2,13 @@ source:
   type: kafka-airflow
   batch-size: 50
   batch-interval: 5
-  topic: test
+  topic: test_avro
   schema: avro
   group-id: local-test
   keypath-seperator: /
-  message-fields-filter:
-    - topic
-    - melding
 target:
   schema: avro
-  topic: test
+  topic: test_avro
 transform:
   - src: kafka_message
     dst: kafka_message

@@ -5,6 +5,8 @@ import environment
 from unittest import mock
 import json
 
+from schema_registry.client import SchemaRegistryClient, schema
+
 __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
 avro_schema_file = os.path.join(__location__, 'test.avsc')
@@ -33,15 +35,32 @@ def mock_settings_env_vars():
 
 @pytest.fixture()
 def test_config():
-    test_config_file = os.path.join(__location__, 'kafka-configs/test-config.yml')
+    test_config_file = os.path.join(
+        __location__, 'kafka-configs/test-config.yml')
     with open(test_config_file) as stream:
         test_config = yaml.safe_load(stream)
     return test_config
 
 
 @pytest.fixture()
-def avro_message():
-    avro_message_file = os.path.join(__location__, 'kafka-messages/melding-avro.json')
+def register_avro():
+    avro_file_path = os.path.realpath(
+        os.path.join(__location__, "test.avsc")
+    )
+
+    with (open(avro_file_path, "r")) as avro_file:
+        avro_file_contents = avro_file.read()
+
+    client = SchemaRegistryClient(url=os.environ["KAFKA_SCHEMA_REGISTRY"])
+    avro_schema = schema.AvroSchema(avro_file_contents)
+    schema_id = client.register("test", avro_schema)
+    return schema_id
+
+
+@pytest.fixture()
+def avro_message(register_avro):
+    avro_message_file = os.path.join(
+        __location__, 'kafka-messages/melding-avro.json')
     with open(avro_message_file) as f:
         avro_message = json.loads(f.read())
     return avro_message

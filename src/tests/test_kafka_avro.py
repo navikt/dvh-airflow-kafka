@@ -9,7 +9,7 @@ from kafka.errors import KafkaError
 from kafka_source import KafkaSource
 from kafka_target import KafkaTarget
 from unittest import mock
-from fixtures.fixtures import test_config, avro_message, mock_settings_env_vars
+from fixtures.fixtures import register_avro, test_config, avro_message, mock_settings_env_vars
 
 
 @pytest.mark.integration
