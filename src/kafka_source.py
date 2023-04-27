@@ -75,7 +75,8 @@ class KafkaSource(Source):
     @staticmethod
     def _string_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
         dictionary = dict(
-            kafka_message=json.dumps(x.decode("UTF-8"), default=str, ensure_ascii=False)
+            kafka_message=json.dumps(
+                x.decode("UTF-8"), default=str, ensure_ascii=False)
         )
         kafka_hash = hashlib.sha256(x).hexdigest()
         return dictionary, kafka_hash
@@ -99,7 +100,8 @@ class KafkaSource(Source):
         if filter_config is not None:
             value.remove(filter_config)
 
-        value["kafka_message"] = json.dumps(value, default=str, ensure_ascii=False)
+        value["kafka_message"] = json.dumps(
+            value, default=str, ensure_ascii=False)
         value["kafka_schema_id"] = schema_id
         value["kafka_hash"] = hashlib.sha256(msg[5:]).hexdigest()
         return value
@@ -134,14 +136,16 @@ class KafkaSource(Source):
         return config
 
     def seek_to_timestamp(self, ts: int) -> Dict[int, TopicPartition]:
-        topic_metadata = self.consumer.list_topics().topics[self.config["topic"]]
+        topic_metadata = self.consumer.list_topics(
+        ).topics[self.config["topic"]]
 
         tp_with_timestamp_as_offset = [
             TopicPartition(topic=self.config["topic"], partition=k, offset=ts)
             for k in topic_metadata.partitions.keys()
         ]
 
-        topic_partitions = self.consumer.offsets_for_times(tp_with_timestamp_as_offset)
+        topic_partitions = self.consumer.offsets_for_times(
+            tp_with_timestamp_as_offset)
         return {tp.partition: tp for tp in topic_partitions}
 
     def unassign_if_assigned(self, consumer: Consumer, tp: TopicPartition) -> None:
@@ -263,6 +267,7 @@ class KafkaSource(Source):
                 yield batch
                 raise exc
 
+        self.consumer.close()
         logging.info(f"Completed with {non_empty_counter} events consumed")
         if empty_counter > 0:
             logging.warning(f"found {empty_counter} empty messages")
