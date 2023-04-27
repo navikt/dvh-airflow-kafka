@@ -10,9 +10,9 @@
 
 ## sqlplus
 
-`sqlplus system/example@//localhost:1521/XEPDB1`
+`docker exec -it oracle sqlplus system/example@//localhost:1521/XEPDB1`
 
-`sqlplus kafka/example@//localhost:1521/XEPDB1`
+`docker exec -it oracle sqlplus kafka/example@//localhost:1521/XEPDB1`
 
 ## docker
 
