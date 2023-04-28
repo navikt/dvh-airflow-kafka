@@ -10,28 +10,29 @@ on:
     branches:
       - main
       - on-prem
+  workflow_dispatch:
 
 env:
   IMAGE_NAME: "ghcr.io/${{ github.repository }}"
 jobs:
   "build":
     name: "build"
-    runs-on: "ubuntu-18.04"
+    runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v3.0.2
 
       - name: "Add sha to environment variable"
         env:
           FULL_SHA: "${{github.sha}}"
-          BRANCH: "${{github.ref}}"
+          REF: "${{github.ref}}"
         run: |
           sha=$(echo $FULL_SHA | cut -c1-7)
-          if [ $BRANCH = refs/heads/main ]
+          branch=$(echo $REF | cut -c12-)
+          if [ $branch = main ]
           then
               echo "IMAGE=$IMAGE_NAME:$sha" >> $GITHUB_ENV
-          elif [ $BRANCH = refs/heads/on-prem ]
-          then
-              echo "IMAGE=$IMAGE_NAME-on-prem:$sha" >> $GITHUB_ENV
+          else 
+              echo "IMAGE=$IMAGE_NAME-$branch:$sha" >> $GITHUB_ENV
           fi
       - name: Add pull request head sha to image environment variable
         if: ${{ github.event_name == 'pull_request' }}
@@ -47,7 +48,6 @@ jobs:
           then
               echo "IMAGE=$IMAGE_NAME-on-prem:RC-$sha" >> $GITHUB_ENV
           fi
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -65,4 +65,4 @@ jobs:
           push: true
           tags: ${{ env.IMAGE }}
           cache-from: type=gha
-          cache-to: type=gha,mode=ma
+          cache-to: type=gha,mode=max

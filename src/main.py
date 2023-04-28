@@ -16,27 +16,21 @@ import json
 
 
 def set_secrets_as_envs():
-    secrets = secretmanager.SecretManagerServiceClient()
-    resource_name = f"{os.environ['KNADA_TEAM_SECRET']}/versions/latest"
-    secret = secrets.access_secret_version(name=resource_name)
-    secret_str = secret.payload.data.decode('UTF-8')
-    secrets = json.loads(secret_str)
-    os.environ.update(secrets)
+    # Set the default resource name if PROJECT_SECRET_PATH is not provided
+    default_resource_name = f"{os.environ['KNADA_TEAM_SECRET']}/versions/latest"
+    resource_name = os.environ.get("PROJECT_SECRET_PATH", default_resource_name)
 
-    with open(os.getenv('KAFKA_CA_PATH'), 'w') as fil:
-        fil.write(os.getenv('KAFKA_CA'))
-
-    with open(os.getenv('KAFKA_CERTIFICATE_PATH'), 'w') as fil:
-        fil.write(os.getenv('KAFKA_CERTIFICATE'))
-
-    with open(os.getenv('KAFKA_PRIVATE_KEY_PATH'), 'w') as fil:
-        fil.write(os.getenv('KAFKA_PRIVATE_KEY'))
-
+    secret_client = secretmanager.SecretManagerServiceClient()
+    secret_version = secret_client.access_secret_version(name=resource_name)
+    secret_payload = secret_version.payload.data.decode("UTF-8")
+    secret_dict = json.loads(secret_payload)
+    os.environ.update(secret_dict)
 
 
 parser = ArgumentParser()
 parser.add_argument("-l", "--local", action="store_true")
 parser.add_argument("-c", "--console", action="store_true")
+
 args = parser.parse_args()
 if args.local:
     load_dotenv("local.env")

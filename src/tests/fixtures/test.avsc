@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "AvroJSON",
+  "fields": [
+    {
+      "name": "_id",
+      "type": "string"
+    },
+    {
+      "name": "index",
+      "type": "long"
+    },
+    {
+      "name": "guid",
+      "type": "string"
+    }
+  ]
+}

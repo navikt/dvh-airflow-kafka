@@ -1,6 +1,7 @@
 import json
 import glob
 import uuid
+import random
 from kafka import KafkaProducer
 
 producer = KafkaProducer(bootstrap_servers=["localhost:9092"])

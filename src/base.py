@@ -3,7 +3,6 @@ import oracledb
 
 
 class Source:
-
     connection_class: Any = NotImplemented
 
     def __init__(self, config: Dict[Text, Any]) -> None:
@@ -14,13 +13,19 @@ class Source:
     ) -> Generator[List[Dict[Text, Any]], None, None]:
         raise NotImplementedError
 
+    def read_once(self, *args, **kwargs) -> Dict[Text, Any]:
+        raise NotImplementedError
+
 
 class Target:
-
     connection_class: Any = NotImplemented
 
     def __init__(self, config: Dict[Text, Any]) -> None:
         self.config = config
+        # self.connection = self.create_connection()
+
+    def create_connection(self) -> object:
+        raise NotImplementedError
 
     def write_batch(self, batch: List[Dict[Text, Any]]) -> None:
         raise NotImplementedError
@@ -36,3 +41,24 @@ class Target:
                 if v["method"] == method
             }
         return {}
+
+    def get_latest_timestamp_for_delta(self) -> Text:
+        raise NotImplementedError
+
+    def metadata(batch):
+        """
+        Takes a batch of kafka source data and logs the metadata. That is all the
+        columns with names starting with 'kafka_'. The other colmns are ignored.
+        Assumes that no columns starting with 'kafka_' contains any personal information.
+
+        Parameters:
+            batch (List[Dict[Text, Any]]): A batch of data
+        """
+        header = [header for header in batch[0].keys() if "message" not in header]
+        header_str = "".join([f"{key:>30}" for key in header])
+        log_list = [header_str]
+        for row in batch:
+            row_str = "".join([f"{row[key]:>30}" for key in header])
+            log_list.append(row_str)
+        log_str = "\n".join(log_list)
+        return log_str

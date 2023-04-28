@@ -18,11 +18,30 @@ oracledb = "^1.2.2"
 python-benedict = "^0.28.1"
 google-api-python-client = "^2.74.0"
 google-cloud-secret-manager = "^2.15.1"
+confluent-kafka = "^2.0.2"
 
 
 [tool.poetry.dev-dependencies]
 black = "^22.6.0"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.2.1"
+python-schema-registry-client = "^2.4.1"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+# Pytest config
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+pythonpath = "src"
+testpaths = [
+    "src/tests",
+]
+markers = [
+    "unit: tests for custom transformations",
+    "functional: tests for source/target interfaces",
+    "integration: Integration tests",
+]

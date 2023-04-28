@@ -1,12 +1,13 @@
 ALTER SESSION SET CONTAINER = XEPDB1;
 
-CREATE SEQUENCE kafka.isdialogmote_sequence
+CREATE SEQUENCE kafka.tabell_sequence
 MINVALUE 1 MAXVALUE 999999999999
 START WITH 1 INCREMENT BY 1 CACHE 20;
 
-CREATE TABLE kafka.raw_isdialogmote (
+CREATE TABLE kafka.raa_tabell (
   kafka_message         BLOB,
   kafka_message_bytes   BLOB,
+  kafka_message_clob    CLOB,
   kafka_key             VARCHAR2(255 CHAR),
   kafka_topic           VARCHAR2(255 CHAR)  NOT NULL,
   kafka_offset          NUMBER              NOT NULL,
@@ -17,8 +18,8 @@ CREATE TABLE kafka.raw_isdialogmote (
   kildesystem           VARCHAR2(255 CHAR)  NOT NULL
 );
 
-ALTER TABLE kafka.raw_isdialogmote
-  ADD CONSTRAINT isdialog_json
+ALTER TABLE kafka.raa_tabell
+  ADD CONSTRAINT is_json
   CHECK (kafka_message IS JSON);
 
 
