@@ -41,9 +41,10 @@ def test_string_deserializer():
 
 @pytest.mark.unit
 def test_json_deserializer(test_config_json):
-    x = "{\"x\": \"x\"}".encode("utf-8")
+    x = '{"x": "x"}'
+    x_bytes = x.encode("utf-8")
     src = KafkaSource(test_config_json["source"])
-    deserialized = src._json_deserializer(x)
+    deserialized = src._json_deserializer(x_bytes)
 
     assert deserialized["kafka_hash"] == "ed298bd5a15cbb33bc4b86650cda3376babf454119b172e107b7ac2e32f69789"
     assert deserialized["kafka_message"] == x
