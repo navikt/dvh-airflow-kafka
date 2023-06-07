@@ -195,7 +195,7 @@ class KafkaSource(Source):
                 logging.info(
                     (
                         f"data_interval_end: {self.data_interval_end} "
-                        f"> last message (offset: {tp.partition}) "
+                        f"> last message (offset: {tp.offset}) "
                         f"in the partition: {tp.partition}"
                     )
                 )
