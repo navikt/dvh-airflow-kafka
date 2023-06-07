@@ -250,6 +250,7 @@ class KafkaSource(Source):
                         [TopicPartition(message.topic(), message.partition())]
                     )
                     assignment_count -= 1
+                    logging.info(f"partition ({message.partition()}) unassigned at offset ({message.offset()})")
 
                 else:  # handle proper message
                     record = self.collect_message(message)
