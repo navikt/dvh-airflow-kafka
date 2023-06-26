@@ -56,7 +56,6 @@ class KafkaSource(Source):
         if message_value is None:
             return benedict(dict(kafka_hash=None, kafka_message=None))
         message = json.loads(message_value.decode("UTF-8"))
-        logging.info(message)
 
         keypath_seperator = self.config.get("keypath-seperator")
         dictionary = benedict(message, keypath_separator=keypath_seperator)
@@ -244,7 +243,7 @@ class KafkaSource(Source):
                         assignment_count -= 1
                     else:
                         logging.error(err.str())
-                elif message.offset() > tp_to_assign_end[message.partition()].offset:
+                elif message.offset() >= tp_to_assign_end[message.partition()].offset:
                     # We are at the end
                     self.consumer.incremental_unassign(
                         [TopicPartition(message.topic(), message.partition())]
