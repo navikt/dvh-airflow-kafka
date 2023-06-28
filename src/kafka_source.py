@@ -243,7 +243,7 @@ class KafkaSource(Source):
                         assignment_count -= 1
                     else:
                         logging.error(err.str())
-                elif message.offset() >= tp_to_assign_end[message.partition()].offset:
+                elif message.offset() > tp_to_assign_end[message.partition()].offset:
                     # We are at the end
                     self.consumer.incremental_unassign(
                         [TopicPartition(message.topic(), message.partition())]
