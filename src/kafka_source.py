@@ -182,9 +182,9 @@ class KafkaSource(Source):
                 )
             else:
                 logging.info(
-                    (f"Partition {tp.partition} ")
-                    (f"is configured to start at offset: {tp.offset}")
-                    (f"for topic: {tp.topic}")
+                    f"Partition {tp.partition} "
+                    f"is configured to start at offset: {tp.offset}"
+                    f"for topic: {tp.topic}"
                 )
                 tp_to_assign_start[tp.partition] = tp
                 tp_to_assign_end[tp.partition] = offset_ends[tp.partition]
