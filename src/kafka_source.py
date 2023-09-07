@@ -153,6 +153,8 @@ class KafkaSource(Source):
             consumer.incremental_unassign([tp])
 
     def collect_message(self, msg: Message) -> Dict[Text, Any]:
+        logging.info(msg.timestamp())
+
         message = {
             "kafka_key": KafkaSource._key_deserializer(msg.key()),
             "kafka_timestamp": msg.timestamp()[1],
