@@ -182,7 +182,9 @@ class KafkaSource(Source):
                 )
             else:
                 logging.info(
-                    (f"Start consuming on offset for " f"{tp.partition}: {tp.offset}")
+                    (f"Partition {tp.partition} ")
+                    (f"is configured to start at offset: {tp.offset}")
+                    (f"for topic: {tp.topic}")
                 )
                 tp_to_assign_start[tp.partition] = tp
                 tp_to_assign_end[tp.partition] = offset_ends[tp.partition]
@@ -263,7 +265,7 @@ class KafkaSource(Source):
                     yield batch
                     batch = []
             except Exception as exc:
-                logging.error("Bailing out...")
+                logging.error(f"Bailing out...{exc}")
                 self.consumer.close()
                 yield batch
                 raise exc
