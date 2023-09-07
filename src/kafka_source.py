@@ -153,16 +153,13 @@ class KafkaSource(Source):
             consumer.incremental_unassign([tp])
 
     def collect_message(self, msg: Message) -> Dict[Text, Any]:
-        logging.info(msg.timestamp())
+        message = {**self.value_deserializer(msg.value())}
+        message["kafka_key"] = KafkaSource._key_deserializer(msg.key())
+        message["kafka_timestamp"] = msg.timestamp()[1]
+        message["kafka_offset"] = msg.offset()
+        message["kafka_partition"] = msg.partition()
+        message["kafka_topic"] = msg.topic()
 
-        message = {
-            "kafka_key": KafkaSource._key_deserializer(msg.key()),
-            "kafka_timestamp": msg.timestamp()[1],
-            "kafka_offset": msg.offset(),
-            "kafka_partition": msg.partition(),
-            "kafka_topic": msg.topic(),
-            **self.value_deserializer(msg.value()),
-        }
         return message
 
     def _prepare_partitions(
