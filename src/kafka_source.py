@@ -8,6 +8,7 @@ import avro.schema
 import avro.io
 import requests
 import logging
+import traceback
 from benedict import benedict
 from confluent_kafka import Consumer, TopicPartition, Message
 from confluent_kafka.error import KafkaError
@@ -265,9 +266,16 @@ class KafkaSource(Source):
                     yield batch
                     batch = []
             except Exception as exc:
-                logging.error(f"Bailing out...{exc}")
                 self.consumer.close()
-                yield batch
+                error_message = "Bailing out..."
+                if batch:
+                    error_message = error_message + \
+                        f", after writing all {len(batch)} messages in batch."
+                    yield batch
+                else:
+                    error_message = error_message + ", no messages read."
+
+                logging.error(error_message)
                 raise exc
 
         self.consumer.close()
