@@ -12,6 +12,18 @@ on:
       - on-prem
   workflow_dispatch:
 
+permissions:
+  actions: write
+  checks: write
+  contents: write
+  deployments: write
+  issues: write
+  packages: write
+  pull-requests: write
+  repository-projects: write
+  security-events: write
+  statuses: write
+
 env:
   IMAGE_NAME: "ghcr.io/${{ github.repository }}"
 jobs:
