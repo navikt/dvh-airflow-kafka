@@ -246,18 +246,22 @@ class KafkaSource(Source):
                         assignment_count -= 1
                     else:
                         logging.error(err.str())
-                elif message.offset() > tp_to_assign_end[message.partition()].offset:
-                    # We are at the end
-                    self.consumer.incremental_unassign(
-                        [TopicPartition(message.topic(), message.partition())]
-                    )
-                    assignment_count -= 1
-                    logging.info(
-                        f"partition ({message.partition()}) unassigned at offset ({message.offset()})")
-
                 else:  # handle proper message
                     record = self.collect_message(message)
                     batch.append(record)
+
+                    # Check if message is the last one, if so unassign
+                    if message.offset() >= tp_to_assign_end[message.partition()].offset:
+                        # We are at the end
+                        self.consumer.incremental_unassign(
+                            [TopicPartition(message.topic(),
+                                            message.partition())]
+                        )
+                        assignment_count -= 1
+                        logging.info(
+                            f"partition ({message.partition()})"
+                            f" unassigned at offset ({message.offset()})")
+
                 if (len(batch) >= batch_size or assignment_count == 0) and len(
                     batch
                 ) > 0:
