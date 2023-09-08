@@ -153,12 +153,13 @@ class KafkaSource(Source):
             consumer.incremental_unassign([tp])
 
     def collect_message(self, msg: Message) -> Dict[Text, Any]:
-        message = {**self.value_deserializer(msg.value())}
+        message = {}
         message["kafka_key"] = KafkaSource._key_deserializer(msg.key())
         message["kafka_timestamp"] = msg.timestamp()[1]
         message["kafka_offset"] = msg.offset()
         message["kafka_partition"] = msg.partition()
         message["kafka_topic"] = msg.topic()
+        message.update(self.value_deserializer(msg.value()))
 
         return message
 
