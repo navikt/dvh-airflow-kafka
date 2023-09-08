@@ -1,8 +1,69 @@
-# Airflow image
+# DVH Airflow Kafka
+dvh-airflow-kafka kan benyttes for å konsumere data fra kafka-topics i Aiven og skrive data til tabeller i Oracle on-prem database (DWH). Dette er typisk aktuelt for "dvh"-team som bygger dataprodukter basert på data i "datavarehuset".
+
+
+Følg denne [guiden](kafka-topic.md) for å opprette en NAIS applikasjon som har tilgang til ønsket topic.
+
+## Konfigurering av kafka-konsument og Airflow
+DVH-AIRFLOW-KAFKA forventer en miljøvariabler `CONSUMER_CONFIG` der verdien er en streng på `yaml` format. Det er denne som bestemmer hvor dataen hentes fra, hvordan den transformeres, og hvor den lagres.\
+Eksempel config:
+```yaml
+source:
+  type: kafka
+  batch-size: 5000
+  batch-interval: 5
+  topic: topic-navn
+  group-id: gruppe-id
+  schema: json | avro | string
+target:
+  type: oracle
+  custom-config:
+  - method: oracledb.Cursor.setinputsizes
+    name: kafka_timestamp
+    value: oracledb.TIMESTAMP
+  - method: oracledb.Cursor.setinputsizes
+    name: kafka_message
+    value: oracledb.DB_TYPE_CLOB | oracledb.DB_TYPE_BLOB
+  delta:
+    column: kafka_timestamp
+    table: <target-table-name>
+  table: <target-table-name>
+  skip-duplicates-with: 
+    - kafka_hash
+transform:
+  - src: kafka_key
+    dst: kafka_key
+  - src: kafka_offset
+    dst: kafka_offset
+  - src: kafka_partition
+    dst: kafka_partition
+  - src: kafka_timestamp
+    dst: kafka_timestamp
+    fun: int-unix-ms -> datetime-no
+  - src: kafka_topic
+    dst: kafka_topic
+  - src: kafka_hash
+    dst: kafka_hash
+  - src: kafka_message
+    dst: kafka_message
+  - src: <kildenavn> # eks $PERMITTERING
+    dst: KILDESYSTEM
+  - src: $$$BATCH_TIME
+    dst: lastet_dato
+```
+
+
+# Development
+Intaller [poetry](https://python-poetry.org/docs/)
+```bash
+poetry install
+```
 
 ## Kjøre lokalt
-
-`py src/main -l`
+```bash
+poetry run python src/main.py -l
+py src/main -l
+```
 
 ## kcat
 
@@ -50,3 +111,9 @@
 
 ## Rydde opp i rot
 `docker compose down -v`
+
+
+
+# Videreutvikling av airflow-konsumenten
+
+Diverse notater og tips for videreutvikling av airflow-konsumenten
