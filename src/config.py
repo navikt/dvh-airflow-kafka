@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 from google.cloud import secretmanager
 import json
 
