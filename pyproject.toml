@@ -6,7 +6,7 @@ authors = ["NAV DVH"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 kafka-python = "^2.0.2"
 avro = "^1.11.0"
 dateparser = "^1.1.1"

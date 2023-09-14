@@ -1,4 +1,4 @@
-FROM navikt/python:3.9
+FROM navikt/python:3.11
 LABEL org.opencontainers.image.source "https://github.com/navikt/dvh-airflow-kafka"
 
 USER root
