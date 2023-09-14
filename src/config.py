@@ -24,6 +24,7 @@ class SecretConfig:
         self.source_secret_path = source_secret_path
         self.target_secret_path = target_secret_path
 
+    @staticmethod
     def _set_secret_as_env(secret_name: str) -> None:
         secret_client = secretmanager.SecretManagerServiceClient()
         secret_version = secret_client.access_secret_version(name=secret_name)
