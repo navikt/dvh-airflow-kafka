@@ -4,8 +4,40 @@ dvh-airflow-kafka kan benyttes for å konsumere data fra kafka-topics i Aiven og
 
 Følg denne [guiden](kafka-topic.md) for å opprette en NAIS applikasjon som har tilgang til ønsket topic.
 
-## Konfigurering av kafka-konsument og Airflow
+## Bruke kafka-konsument i Airflow
+DVH-AIRFLOW-KAFKA bruker `google secret manager` for å laste inn hemligheter for å koble til et kafka topic og oracle. Du angir navnet på hemlighetene slik at konsumenten kan laste inn hemlighetene som miljøvariabler. Som bruker har du disse mulighetene:
+1. `SOURCE_SECRET_PATH` & `TARGET_SECRET_PATH`
+2. `PROJECT_SECRET_PATH`
+
+Vi anbefaler å legge inn kafka hemligheten i `SOURCE_SECRET_PATH` og oracle hemlighetene i `TARGET_SECRET_PATH`. Alternativt kan de kombineres i en hemliget som angis av `PROJECT_SECRET_PATH`
+
+Dette er miljøvariablene som forventes i SOURCE:
+```json
+{
+  "DB_USER": "user",
+  "DB_PASSWORD": "password",
+  "DB_DSN": "dsn",
+}
+```
+
+Dette er miljøvariablene som forventes i TARGET:
+```json
+{
+  "KAFKA_BROKERS": "",
+  "KAFKA_CA": "",
+  "KAFKA_CERTIFICATE": "",
+  "KAFKA_CREDSTORE_PASSWORD": "",
+  "KAFKA_PRIVATE_KEY": "",
+  "KAFKA_SCHEMA_REGISTRY": "",
+  "KAFKA_SCHEMA_REGISTRY_PASSWORD": "",
+  "KAFKA_SCHEMA_REGISTRY_USER": "",
+  "KAFKA_SECRET_UPDATED": "",
+}
+```
+
 DVH-AIRFLOW-KAFKA forventer en miljøvariabler `CONSUMER_CONFIG` der verdien er en streng på `yaml` format. Det er denne som bestemmer hvor dataen hentes fra, hvordan den transformeres, og hvor den lagres.\
+Kodeeksempel [dv-a-team-dags](https://github.com/navikt/dv-a-team-dags/blob/main/consumer_configs/perm_config.py)
+
 Eksempel config:
 ```yaml
 source:

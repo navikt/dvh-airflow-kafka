@@ -11,21 +11,7 @@ from kafka_source import KafkaSource
 from oracle_target import OracleTarget
 import environment
 from console_target import console_target
-from google.cloud import secretmanager
-import json
-
-
-def set_secrets_as_envs():
-    # Set the default resource name if PROJECT_SECRET_PATH is not provided
-    default_resource_name = f"{os.environ['KNADA_TEAM_SECRET']}/versions/latest"
-    resource_name = os.environ.get("PROJECT_SECRET_PATH", default_resource_name)
-
-    secret_client = secretmanager.SecretManagerServiceClient()
-    secret_version = secret_client.access_secret_version(name=resource_name)
-    secret_payload = secret_version.payload.data.decode("UTF-8")
-    secret_dict = json.loads(secret_payload)
-    os.environ.update(secret_dict)
-
+from config import set_secrets_as_envs, SecretConfig
 
 parser = ArgumentParser()
 parser.add_argument("-l", "--local", action="store_true")
@@ -36,7 +22,15 @@ if args.local:
     load_dotenv("local.env")
     environment.isNotLocal = False
 else:
-    set_secrets_as_envs()
+    project_secret_path = os.environ.get("PROJECT_SECRET_PATH", None)
+    if project_secret_path:
+        set_secrets_as_envs()
+    else:
+        config = SecretConfig(
+            source_secret_path=os.environ["SOURCE_SECRET_PATH"],
+            target_secret_path=os.environ["TARGET_SECRET_PATH"],
+        )
+        config.load_secrets_to_env()
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 logging.basicConfig(
