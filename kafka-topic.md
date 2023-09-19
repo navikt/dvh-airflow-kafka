@@ -15,6 +15,11 @@ Sette opp en [NAIS applikasjon](https://doc.nais.io/basics/access/?h=kubectl) fr
 
 ### Opplasting av kafka kredentials til Google secrets
 Siden airflow kjører i knada sitt cluster, må vi hente credentials fra nais-applikasjonen og laste opp dette i en google secret.
+
+1. [dvh-secret-tools](https://github.com/navikt/dvh-secret-tools)
+Python cli som henter kafka-hemmeligheter fra en nais app og legger det inn i en google secret. Verktøyet er inspirert av klipp og lim løsningen under, og du unngår å kopiere hemmeligheter i fritekst.
+
+2. Klipp og lim løsning
 - Hent credentials til en lokal fil `cred.txt`
     ```bash
     kubectl get secret -n <team-navn> <nais-hemmlighet-navn> -o yaml > cred.txt
