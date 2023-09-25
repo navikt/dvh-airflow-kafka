@@ -40,14 +40,23 @@ Kodeeksempel [dv-a-team-dags](https://github.com/navikt/dv-a-team-dags/blob/main
 
 Eksempel config:
 ```yaml
+# Kildekonfigurasjon. 
 source:
+  # Kun kafka er støttet for øyeblikket
   type: kafka
+  # Hvor mange meldinger skal leses før du skriver til target
   batch-size: 5000
+  # Minimum tid konsumenten skal polle etter nyemeldinger før den returnerer
   batch-interval: 5
+  # Kafka topic som skal kobles til som kilde
   topic: topic-navn
+  # Et unikt group id som skal identfirseres som en subscriber på topicet. Viktig at det er unikt hvis samme konsument skal ha flere subscribtions
   group-id: gruppe-id
+  # Type skjema. String er rå streng. Alt aksepteres. JSON skjema har struktur. Avro er streng på datatyper og nullverdier.
   schema: json | avro | string
+# Mål
 target:
+  # Kun Oracle er støttet for øyeblikket
   type: oracle
   custom-config:
   - method: oracledb.Cursor.setinputsizes
@@ -56,12 +65,19 @@ target:
   - method: oracledb.Cursor.setinputsizes
     name: kafka_message
     value: oracledb.DB_TYPE_CLOB | oracledb.DB_TYPE_BLOB
+  # Hvis denne er med vil maksverdi i måltabellen bestemme hvor lesing av kafkatopicet skal starte. Ellers må data_interval_start spesifiseres eksplisitt i DAG.
   delta:
+    # Kolonne det skal beregnes maksverdi fra.
     column: kafka_timestamp
+    # Stort sett samme som under
     table: <target-table-name>
+  # Måltabell
   table: <target-table-name>
+  # Hvis du ønsker å filtrere duplikater fra kilde. Tar en liste med en eller flere kolonner.
   skip-duplicates-with: 
+    # Hvilke kolonner som til sammen skal være unike.
     - kafka_hash
+# Mapping mellom kildekolonne og målkolonne
 transform:
   - src: kafka_key
     dst: kafka_key
@@ -71,6 +87,7 @@ transform:
     dst: kafka_partition
   - src: kafka_timestamp
     dst: kafka_timestamp
+    # Eksempel på konverteringsfunksjon
     fun: int-unix-ms -> datetime-no
   - src: kafka_topic
     dst: kafka_topic
