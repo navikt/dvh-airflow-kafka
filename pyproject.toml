@@ -22,7 +22,7 @@ confluent-kafka = "^2.0.2"
 
 
 [tool.poetry.dev-dependencies]
-black = "^22.6.0"
+black = "^23.9.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.1"
