@@ -2,15 +2,10 @@
 name: Publish to ghcr
 
 on:
-  pull_request:
-    branches:
-      - main
-      - on-prem
-      - '!dependabot'
   push:
     branches:
       - main
-      - on-prem
+      - feat/**
   workflow_dispatch:
 
 permissions:
@@ -50,20 +45,6 @@ jobs:
               echo "IMAGE=$IMAGE_NAME:$sha" >> $GITHUB_ENV
           else 
               echo "IMAGE=$IMAGE_NAME-$branch:$sha" >> $GITHUB_ENV
-          fi
-      - name: Add pull request head sha to image environment variable
-        if: ${{ github.event_name == 'pull_request' }}
-        env:
-          FULL_SHA: "${{github.event.pull_request.head.sha}}"
-          BRANCH: "${{github.event.pull_request.base.ref}}"
-        run: |
-          sha=$(echo $FULL_SHA | cut -c1-7)
-          if [ $BRANCH = main ]
-          then
-              echo "IMAGE=$IMAGE_NAME:RC-$sha" >> $GITHUB_ENV
-          elif [ $BRANCH = on-prem ]
-          then
-              echo "IMAGE=$IMAGE_NAME-on-prem:RC-$sha" >> $GITHUB_ENV
           fi
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
