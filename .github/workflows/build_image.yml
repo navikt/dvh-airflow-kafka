@@ -6,6 +6,8 @@ on:
     branches:
       - main
       - on-prem
+    branches-ignore:
+      - dependabot
   push:
     branches:
       - main
