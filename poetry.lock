@@ -51,12 +51,12 @@ tests-no-zope = ["cloudpickle", "cloudpickle", "hypothesis", "hypothesis", "mypy
 
 [[package]]
 name = "avro"
-version = "1.11.1"
+version = "1.11.3"
 description = "Avro is a serialization and RPC framework."
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "avro-1.11.1.tar.gz", hash = "sha256:f123623ecc648d0e20ce14f8ed85162140c13cc4b108865d1b2529fbfa06c008"},
+    {file = "avro-1.11.3.tar.gz", hash = "sha256:3393bb5139f9cf0791d205756ce1e39a5b58586af5b153d6a3b5a199610e9d17"},
 ]
 
 [package.extras]
@@ -1555,4 +1555,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "129f41ef6f9559c018b6678fdb9e1aecfc09a96f1859f93db071f159fb57cd94"
+content-hash = "f31fe02771c7d8d7ff6a9555db8f3c874aba16e86b57380ec9b0f9413f489c66"
