@@ -17,7 +17,7 @@ python-dotenv = "^1.0.0"
 oracledb = "^1.4.1"
 python-benedict = "^0.32.1"
 google-api-python-client = "^2.100.0"
-google-cloud-secret-manager = "^2.15.1"
+google-cloud-secret-manager = "^2.16.4"
 confluent-kafka = "^2.0.2"
 
 
