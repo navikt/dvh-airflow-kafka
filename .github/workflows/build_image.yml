@@ -10,15 +10,9 @@ on:
 
 permissions:
   actions: write
-  checks: write
-  contents: write
-  deployments: write
-  issues: write
+  contents: read
+  id-token: write
   packages: write
-  pull-requests: write
-  repository-projects: write
-  security-events: write
-  statuses: write
 
 env:
   IMAGE_NAME: "ghcr.io/${{ github.repository }}"
