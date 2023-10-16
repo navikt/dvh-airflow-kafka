@@ -18,7 +18,7 @@ oracledb = "^1.4.2"
 python-benedict = "^0.32.1"
 google-api-python-client = "^2.103.0"
 google-cloud-secret-manager = "^2.16.4"
-confluent-kafka = "^2.0.2"
+confluent-kafka = "^2.2.0"
 
 
 [tool.poetry.dev-dependencies]
