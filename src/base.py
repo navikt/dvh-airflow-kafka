@@ -1,12 +1,12 @@
 from typing import Generator, Dict, Text, Any, List, Tuple
-import oracledb
+from config import SourceConfig, TargetConfig
 
 
 class Source:
     connection_class: Any = NotImplemented
 
     def __init__(self, config: Dict[Text, Any]) -> None:
-        self.config = config
+        self.config = SourceConfig(**config).model_dump(by_alias=True)
 
     def read_batches(
         self, *args, **kwargs
@@ -21,7 +21,7 @@ class Target:
     connection_class: Any = NotImplemented
 
     def __init__(self, config: Dict[Text, Any]) -> None:
-        self.config = config
+        self.config = TargetConfig(**config).model_dump(by_alias=True)
         # self.connection = self.create_connection()
 
     def create_connection(self) -> object:

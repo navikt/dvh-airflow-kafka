@@ -4,6 +4,9 @@ version = "0.0.1"
 description = ""
 authors = ["NAV DVH"]
 license = "MIT"
+packages = [
+    { include = "src"},
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -19,6 +22,7 @@ python-benedict = "^0.33.0"
 google-api-python-client = "^2.110.0"
 google-cloud-secret-manager = "^2.16.4"
 confluent-kafka = "^2.3.0"
+pydantic = "^2.5.2"
 
 
 [tool.poetry.dev-dependencies]
