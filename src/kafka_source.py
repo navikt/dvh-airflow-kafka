@@ -47,11 +47,16 @@ class KafkaSource(Source):
         logging.info(f"data_interval_start: {self.data_interval_start}")
         logging.info(f"data_interval_stop: {self.data_interval_end}")
 
-    @staticmethod
-    def _key_deserializer(x: Optional[bytes]) -> Text:
+    def _key_deserializer(self, x: Optional[bytes]) -> Text:
+        decoder = self.config.get("key-decoder", "utf-8")
         if x is None:
             return ""
-        return x.decode("utf-8")
+        if decoder == "int-64":
+            return str(int.from_bytes(x, byteorder="big"))
+        elif decoder == "utf-8":
+            return x.decode("utf-8")
+        else:
+            raise ValueError(f"Decode: {decoder} not valid. Use utf-8 or int-64")
 
     def _json_deserializer(self, message_value: bytes) -> Dict[Text, Any]:
         if message_value is None:
@@ -65,8 +70,7 @@ class KafkaSource(Source):
         dictionary.remove(filter_config)
 
         kafka_hash = hashlib.sha256(message_value).hexdigest()
-        kafka_message = json.dumps(
-            dictionary, ensure_ascii=False)
+        kafka_message = json.dumps(dictionary, ensure_ascii=False)
 
         dictionary["kafka_message"] = kafka_message
         dictionary["kafka_hash"] = kafka_hash
@@ -75,8 +79,7 @@ class KafkaSource(Source):
     @staticmethod
     def _string_deserializer(x: bytes) -> Tuple[Dict[Text, Any], Text]:
         dictionary = dict(
-            kafka_message=json.dumps(
-                x.decode("UTF-8"), default=str, ensure_ascii=False)
+            kafka_message=json.dumps(x.decode("UTF-8"), default=str, ensure_ascii=False)
         )
         kafka_hash = hashlib.sha256(x).hexdigest()
         return dictionary, kafka_hash
@@ -100,8 +103,7 @@ class KafkaSource(Source):
         if filter_config is not None:
             value.remove(filter_config)
 
-        value["kafka_message"] = json.dumps(
-            value, default=str, ensure_ascii=False)
+        value["kafka_message"] = json.dumps(value, default=str, ensure_ascii=False)
         value["kafka_schema_id"] = schema_id
         value["kafka_hash"] = hashlib.sha256(msg[5:]).hexdigest()
         return value
@@ -136,16 +138,14 @@ class KafkaSource(Source):
         return config
 
     def seek_to_timestamp(self, ts: int) -> Dict[int, TopicPartition]:
-        topic_metadata = self.consumer.list_topics(
-        ).topics[self.config["topic"]]
+        topic_metadata = self.consumer.list_topics().topics[self.config["topic"]]
 
         tp_with_timestamp_as_offset = [
             TopicPartition(topic=self.config["topic"], partition=k, offset=ts)
             for k in topic_metadata.partitions.keys()
         ]
 
-        topic_partitions = self.consumer.offsets_for_times(
-            tp_with_timestamp_as_offset)
+        topic_partitions = self.consumer.offsets_for_times(tp_with_timestamp_as_offset)
         return {tp.partition: tp for tp in topic_partitions}
 
     def unassign_if_assigned(self, consumer: Consumer, tp: TopicPartition) -> None:
@@ -154,7 +154,7 @@ class KafkaSource(Source):
 
     def collect_message(self, msg: Message) -> Dict[Text, Any]:
         message = {}
-        message["kafka_key"] = KafkaSource._key_deserializer(msg.key())
+        message["kafka_key"] = self._key_deserializer(msg.key())
         message["kafka_timestamp"] = msg.timestamp()[1]
         message["kafka_offset"] = msg.offset()
         message["kafka_partition"] = msg.partition()
@@ -254,13 +254,13 @@ class KafkaSource(Source):
                     if message.offset() >= tp_to_assign_end[message.partition()].offset:
                         # We are at the end
                         self.consumer.incremental_unassign(
-                            [TopicPartition(message.topic(),
-                                            message.partition())]
+                            [TopicPartition(message.topic(), message.partition())]
                         )
                         assignment_count -= 1
                         logging.info(
                             f"partition ({message.partition()})"
-                            f" unassigned at offset ({message.offset()})")
+                            f" unassigned at offset ({message.offset()})"
+                        )
 
                 if (len(batch) >= batch_size or assignment_count == 0) and len(
                     batch
@@ -273,8 +273,10 @@ class KafkaSource(Source):
                 self.consumer.close()
                 error_message = "Bailing out..."
                 if batch:
-                    error_message = error_message + \
-                        f", after writing all {len(batch)} messages in batch."
+                    error_message = (
+                        error_message
+                        + f", after writing all {len(batch)} messages in batch."
+                    )
                     yield batch
                 else:
                     error_message = error_message + ", no messages read."
