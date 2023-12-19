@@ -1,6 +1,7 @@
 import os
 import json
 from enum import StrEnum
+from typing import Optional
 
 from pydantic import BaseModel, Field, ConfigDict
 from google.cloud import secretmanager
@@ -69,6 +70,8 @@ class SourceConfig(BaseModel):
     group_id: str = Field(alias="group-id")
     schema_type: SchemaType = Field(alias="schema")
     key_decoder: KeyDecoder = Field("utf-8", alias="key-decoder")
+    keypath_separator: Optional[str] = Field(None, alias="keypath-seperator")
+    message_fields_filter: Optional[list] = Field([], alias="message-fields-filter")
 
 
 class TargetConfig(BaseModel):
