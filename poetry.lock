@@ -621,22 +621,19 @@ six = "*"
 
 [[package]]
 name = "google-cloud-secret-manager"
-version = "2.16.4"
+version = "2.17.0"
 description = "Google Cloud Secret Manager API client library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-cloud-secret-manager-2.16.4.tar.gz", hash = "sha256:371dc72f9145af323e8a813c8e50380e6ac4bd6a5dbcd42dcf3162d8f37e5080"},
-    {file = "google_cloud_secret_manager-2.16.4-py2.py3-none-any.whl", hash = "sha256:5031c45dd84dc584d91ee0baae2bbd5df6710efe0c42719ee370a3ab62aaf618"},
+    {file = "google-cloud-secret-manager-2.17.0.tar.gz", hash = "sha256:8254e2960c06a8dc91aeac3c894afba0893a674582f0e0ecfc22f894e6173c2f"},
+    {file = "google_cloud_secret_manager-2.17.0-py2.py3-none-any.whl", hash = "sha256:2bf58be569710773f0757d7a788e2860767aa1c148a5255e53b228da3fbcf446"},
 ]
 
 [package.dependencies]
 google-api-core = {version = ">=1.34.0,<2.0.dev0 || >=2.11.dev0,<3.0.0dev", extras = ["grpc"]}
 grpc-google-iam-v1 = ">=0.12.4,<1.0.0dev"
-proto-plus = [
-    {version = ">=1.22.2,<2.0.0dev", markers = "python_version >= \"3.11\""},
-    {version = ">=1.22.0,<2.0.0dev", markers = "python_version < \"3.11\""},
-]
+proto-plus = ">=1.22.3,<2.0.0dev"
 protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<5.0.0dev"
 
 [[package]]
@@ -989,13 +986,13 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "proto-plus"
-version = "1.22.2"
+version = "1.23.0"
 description = "Beautiful, Pythonic protocol buffers."
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "proto-plus-1.22.2.tar.gz", hash = "sha256:0e8cda3d5a634d9895b75c573c9352c16486cb75deb0e078b5fda34db4243165"},
-    {file = "proto_plus-1.22.2-py3-none-any.whl", hash = "sha256:de34e52d6c9c6fcd704192f09767cb561bb4ee64e70eede20b0834d841f0be4d"},
+    {file = "proto-plus-1.23.0.tar.gz", hash = "sha256:89075171ef11988b3fa157f5dbd8b9cf09d65fffee97e29ce403cd8defba19d2"},
+    {file = "proto_plus-1.23.0-py3-none-any.whl", hash = "sha256:a829c79e619e1cf632de091013a4173deed13a55f326ef84f05af6f50ff4c82c"},
 ]
 
 [package.dependencies]
@@ -1704,4 +1701,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "611efa023d2c22a517825475eee89d14f0f21c95fd714a09804696030a42ad2c"
+content-hash = "4c33058e70f8c05f8e3f9ad11130ab5c4625a8eb0884ce0df303cd1606073832"
