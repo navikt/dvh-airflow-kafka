@@ -49,3 +49,8 @@ def test_source_constructor(source_config):
 
 def test_target_constructor(target_config):
     Target(target_config)
+
+
+def test_target_get_kv_from_config_by_method(target_config):
+    target = Target(target_config)
+    target.get_kv_from_config_by_method("oracledb.Cursor.setinputsizes")
