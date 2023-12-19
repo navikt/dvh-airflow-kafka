@@ -81,4 +81,4 @@ class TargetConfig(BaseModel):
     custom_config: list = Field(alias="custom-config")
     delta: dict
     table: str
-    skip_duplicates_with: list = Field(alias="skip-duplicates-with")
+    skip_duplicates_with: Optional[list] = Field([], alias="skip-duplicates-with")
