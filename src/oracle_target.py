@@ -14,7 +14,7 @@ class OracleTarget(Target):
 
     def __init__(self, config: Dict[Text, Any]) -> None:
         super().__init__(config)
-        if self.config.get("delta"):
+        if self.config.delta is not None:
             os.environ["DATA_INTERVAL_START"] = self.get_latest_timestamp_for_delta()
 
     def _oracle_connection(self) -> oracledb.connect:
@@ -27,8 +27,8 @@ class OracleTarget(Target):
         )
 
     def get_latest_timestamp_for_delta(self):
-        delta_column = self.config["delta"]["column"]
-        delta_table = self.config["delta"].get("table") or self.config["table"]
+        delta_column = self.config.delta["column"]
+        delta_table = self.config.delta.get("table") or self.config.table
         with self._oracle_connection() as con:
             with con.cursor() as cur:
                 cur.execute(f"select max({delta_column}) from {delta_table}")
@@ -42,11 +42,11 @@ class OracleTarget(Target):
         return utc_timestamp_ms
 
     def get_kode67(self, batch: List[Dict[Text, Any]]) -> List[Tuple]:
-        k6_conf = self.config.get("k6-filter")
+        k6_conf = self.config.k6_filter
         if k6_conf is not None:
-            timestamp_col = k6_conf["timestamp"]
+            timestamp_col = k6_conf.timestamp
             timestamp = int_ms_to_date(batch[-1][timestamp_col])
-            person_identer = [msg.get(k6_conf["col"]) for msg in batch]
+            person_identer = [msg.get(k6_conf.col) for msg in batch]
 
             # generating sequential sql bind variable names for the range of personidenter i batchen
             # example :1,:2,:3 etc
@@ -59,9 +59,9 @@ class OracleTarget(Target):
             bind_values.update({"timestamp": timestamp})
 
             sql = f"""
-                SELECT {k6_conf["filter-col"]}
-                FROM {k6_conf["filter-table"]}
-                WHERE {k6_conf["filter-col"]} IN ({in_bind_names})
+                SELECT {k6_conf.filter_col}
+                FROM {k6_conf.filter_table}
+                WHERE {k6_conf.filter_col} IN ({in_bind_names})
                 AND TRUNC(:timestamp) BETWEEN gyldig_fra_dato AND gyldig_til_dato
                 AND skjermet_kode IN(6,7)
             """
@@ -72,9 +72,9 @@ class OracleTarget(Target):
         return []
 
     def write_batch(self, batch: List[Dict[Text, Any]]) -> None:
-        table = self.config["table"]
+        table = self.config.table
 
-        fp = self.config.get("custom-insert")
+        fp = self.config.custom_insert
         if fp:
             with open(fp) as f:
                 sql = f.read()
@@ -82,7 +82,7 @@ class OracleTarget(Target):
             columns = list(batch[0].keys())
             sql = f"insert into {table} ({','.join(columns)}) select :{',:'.join(columns)} from dual where 1=1"
 
-            duplicate_column = self.config.get("skip-duplicates-with")
+            duplicate_column = self.config.skip_duplicates_with
             if duplicate_column:
                 duplicate_columns = [f"{item}=:{item}" for item in duplicate_column]
                 bind_duplicate_column_names = " and ".join(duplicate_columns)

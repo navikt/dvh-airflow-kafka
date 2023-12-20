@@ -14,6 +14,7 @@ from confluent_kafka import Consumer, TopicPartition, Message
 from confluent_kafka.error import KafkaError
 import environment
 from base import Source
+from config import SchemaType, KeyDecoder
 
 _CONFLUENT_SUBJECT_NOT_FOUND = 40401
 _CONFLUENT_VERSION_NOT_FOUND = 40402
@@ -29,12 +30,12 @@ class KafkaSource(Source):
         self.value_deserializer = self._set_value_deserializer()
 
     def _set_value_deserializer(self):
-        if self.config["schema"] == "avro":
+        if self.config.schema_type == SchemaType.AVRO:
             value_deserializer = self._avro_deserializer
             self.schema_cache: SchemaCache = {}
-        elif self.config["schema"] == "json":
+        elif self.config.schema_type == SchemaType.JSON:
             value_deserializer = self._json_deserializer
-        elif self.config["schema"] == "string":
+        elif self.config.schema_type == SchemaType.STRING:
             value_deserializer = self._string_deserializer
         else:
             raise AssertionError
@@ -48,25 +49,26 @@ class KafkaSource(Source):
         logging.info(f"data_interval_stop: {self.data_interval_end}")
 
     def _key_deserializer(self, x: Optional[bytes]) -> Text:
-        decoder = self.config.get("key-decoder", "utf-8")
         if x is None:
             return ""
-        if decoder == "int-64":
+        if self.config.key_decoder == KeyDecoder.INT_64:
             return str(int.from_bytes(x, byteorder="big"))
-        elif decoder == "utf-8":
+        elif self.config.key_decoder == KeyDecoder.UTF_8:
             return x.decode("utf-8")
         else:
-            raise ValueError(f"Decode: {decoder} not valid. Use utf-8 or int-64")
+            raise ValueError(
+                f"Decode: {self.config.key_decoder} not valid. Use utf-8 or int-64"
+            )
 
     def _json_deserializer(self, message_value: bytes) -> Dict[Text, Any]:
         if message_value is None:
             return benedict(dict(kafka_hash=None, kafka_message=None))
         message = json.loads(message_value.decode("UTF-8"))
 
-        keypath_seperator = self.config.get("keypath-seperator")
-        dictionary = benedict(message, keypath_separator=keypath_seperator)
+        keypath_separator = self.config.keypath_separator
+        dictionary = benedict(message, keypath_separator=keypath_separator)
 
-        filter_config = self.config.get("message-fields-filter", [])
+        filter_config = self.config.message_fields_filter
         dictionary.remove(filter_config)
 
         kafka_hash = hashlib.sha256(message_value).hexdigest()
@@ -95,11 +97,11 @@ class KafkaSource(Source):
         value = self.schema_cache[schema_id].read(decoder)
         value = benedict(value)
 
-        separator = self.config.get("keypath-seperator")
+        separator = self.config.keypath_separator
         if separator is not None:
             value.keypath_separator = separator
 
-        filter_config = self.config.get("message-fields-filter")
+        filter_config = self.config.message_fields_filter
         if filter_config is not None:
             value.remove(filter_config)
 
@@ -123,7 +125,7 @@ class KafkaSource(Source):
             "auto.offset.reset": "earliest",
             "enable.auto.commit": False,
             "bootstrap.servers": os.environ["KAFKA_BROKERS"],
-            "group.id": self.config["group-id"],
+            "group.id": self.config.group_id,
         }
 
         if environment.isNotLocal:
@@ -138,10 +140,10 @@ class KafkaSource(Source):
         return config
 
     def seek_to_timestamp(self, ts: int) -> Dict[int, TopicPartition]:
-        topic_metadata = self.consumer.list_topics().topics[self.config["topic"]]
+        topic_metadata = self.consumer.list_topics().topics[self.config.topic]
 
         tp_with_timestamp_as_offset = [
-            TopicPartition(topic=self.config["topic"], partition=k, offset=ts)
+            TopicPartition(topic=self.config.topic, partition=k, offset=ts)
             for k in topic_metadata.partitions.keys()
         ]
 
@@ -209,7 +211,7 @@ class KafkaSource(Source):
         or from custom offsets (silently ignored for non-existing partitions)
         """
         self.consumer = Consumer(self._kafka_config())
-        batch_size = self.config["batch-size"]
+        batch_size = self.config.batch_size
         tp_to_assign_start, tp_to_assign_end = self._prepare_partitions()
         topic_partitions = list(tp_to_assign_start.values())
         self.consumer.assign(topic_partitions)

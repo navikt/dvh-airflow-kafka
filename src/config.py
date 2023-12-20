@@ -71,7 +71,14 @@ class SourceConfig(BaseModel):
     schema_type: SchemaType = Field(alias="schema")
     key_decoder: KeyDecoder = Field("utf-8", alias="key-decoder")
     keypath_separator: Optional[str] = Field(None, alias="keypath-seperator")
-    message_fields_filter: Optional[list] = Field([], alias="message-fields-filter")
+    message_fields_filter: Optional[list] = Field(None, alias="message-fields-filter")
+
+
+class K6Filter(BaseModel):
+    filter_table: str = Field(alias="filter-table")
+    filter_col: str = Field(alias="filter-col")
+    col: str
+    timestamp: str
 
 
 class TargetConfig(BaseModel):
@@ -82,3 +89,7 @@ class TargetConfig(BaseModel):
     table: str
     delta: Optional[dict] = None
     skip_duplicates_with: Optional[list] = Field([], alias="skip-duplicates-with")
+    k6_filter: Optional[K6Filter] = Field(None, alias="k6-filter")
+    custom_insert: str = Field(
+        None, description="Filepath to custom sql file", alias="custom-insert"
+    )
