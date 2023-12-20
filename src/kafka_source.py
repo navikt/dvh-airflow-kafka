@@ -69,7 +69,8 @@ class KafkaSource(Source):
         dictionary = benedict(message, keypath_separator=keypath_separator)
 
         filter_config = self.config.message_fields_filter
-        dictionary.remove(filter_config)
+        if filter_config is not None:
+            dictionary.remove(filter_config)
 
         kafka_hash = hashlib.sha256(message_value).hexdigest()
         kafka_message = json.dumps(dictionary, ensure_ascii=False)
