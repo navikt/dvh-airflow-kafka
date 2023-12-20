@@ -36,10 +36,10 @@ class Target:
         raise NotImplementedError
 
     def get_kv_from_config_by_method(self, method):
-        if self.config.get("custom-config"):
+        if self.config.custom_config:
             return {
                 v["name"]: eval(v["value"])
-                for v in self.config.get("custom-config")
+                for v in self.config.custom_config
                 if v["method"] == method
             }
         return {}
