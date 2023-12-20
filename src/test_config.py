@@ -26,6 +26,11 @@ def base_config():
         column: kafka_timestamp
         table: DVH_ARB_STILLING.RAA_ARBEIDSMARKED_STILLING_STROM
       table: DVH_ARB_STILLING.RAA_ARBEIDSMARKED_STILLING_STROM
+      k6-filter:
+        filter-table: dt_person.dvh_person_ident_off_id
+        filter-col: off_id
+        timestamp: kafka_timestamp
+        col: personIdent
       skip-duplicates-with: 
         - kafka_hash
     """
@@ -57,7 +62,6 @@ def test_invalid_schema(source_config):
 
 def test_target_config(target_config):
     target_config = TargetConfig(**target_config)
-
     assert target_config.type == "oracle"
     assert type(target_config.skip_duplicates_with) == list
 
@@ -67,3 +71,16 @@ def test_invalid_target_config(target_config):
 
     with pytest.raises(ValueError):
         TargetConfig(**target_config)
+
+
+def test_target_config_k6filter(target_config):
+    TargetConfig(**target_config)
+    target_config["k6-filter"].pop("col")
+    with pytest.raises(ValueError):
+        TargetConfig(**target_config)
+    target_config["k6-filter"] = {}
+    with pytest.raises(ValueError):
+        TargetConfig(**target_config)
+
+    target_config["k6-filter"] = None
+    TargetConfig(**target_config)
