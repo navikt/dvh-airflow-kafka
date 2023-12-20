@@ -71,7 +71,7 @@ class SourceConfig(BaseModel):
     schema_type: SchemaType = Field(alias="schema")
     key_decoder: KeyDecoder = Field("utf-8", alias="key-decoder")
     keypath_separator: Optional[str] = Field(None, alias="keypath-seperator")
-    message_fields_filter: Optional[list] = Field([], alias="message-fields-filter")
+    message_fields_filter: Optional[list] = Field(None, alias="message-fields-filter")
 
 
 class K6Filter(BaseModel):
