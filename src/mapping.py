@@ -31,11 +31,11 @@ class Mapping:
         total_messages = 0
         for batch in self.source.read_polled_batches():
             total_messages += len(batch)
-            k6_conf = self.target.config.get("k6-filter")
+            k6_conf = self.target.config.k6_filter
             if k6_conf:
                 kode67_personer = set(*zip(*self.target.get_kode67(batch)))
                 for msg in batch:
-                    if msg.get(k6_conf["col"]) in kode67_personer:
+                    if msg.get(k6_conf.col) in kode67_personer:
                         msg["kafka_message"] = None
             self.target.write_batch(list(map(self.transform, batch)))
         if environment.isNotLocal:
