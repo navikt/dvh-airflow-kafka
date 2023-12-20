@@ -83,7 +83,7 @@ class OracleTarget(Target):
             sql = f"insert into {table} ({','.join(columns)}) select :{',:'.join(columns)} from dual where 1=1"
 
             duplicate_column = self.config.get("skip-duplicates-with")
-            if duplicate_column is not None:
+            if duplicate_column:
                 duplicate_columns = [f"{item}=:{item}" for item in duplicate_column]
                 bind_duplicate_column_names = " and ".join(duplicate_columns)
                 sql += f""" and not exists ( select null from {table} where 
