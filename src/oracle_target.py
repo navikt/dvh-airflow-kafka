@@ -22,8 +22,6 @@ class OracleTarget(Target):
             user=os.environ["DB_USER"],
             password=os.environ["DB_PASSWORD"],
             dsn=os.environ["DB_DSN"],
-            encoding="utf-8",
-            nencoding="utf-8",
         )
 
     def get_latest_timestamp_for_delta(self):
