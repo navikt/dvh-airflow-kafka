@@ -1335,13 +1335,13 @@ files = [
 
 [[package]]
 name = "python-schema-registry-client"
-version = "2.5.2"
+version = "2.5.3"
 description = "Python Rest Client to interact against Schema Registry confluent server"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "python_schema_registry_client-2.5.2-py3-none-any.whl", hash = "sha256:3af3eae5f4cde582f3a9dea4bb502d1a1c03c4b19a5dd2a40679255c4231bd80"},
-    {file = "python_schema_registry_client-2.5.2.tar.gz", hash = "sha256:0f36d70c5894250c39cd6e7515320697065bdaa44d2c8d520cc1306ce4605740"},
+    {file = "python_schema_registry_client-2.5.3-py3-none-any.whl", hash = "sha256:ef22b61bc75cb383169d1cb4a8647aead0f3ecf32c7468986a9eba6e16fa1e1d"},
+    {file = "python_schema_registry_client-2.5.3.tar.gz", hash = "sha256:d2adbca03e656977a28299c950ad6d05670f68283e817b1da251fcd25e1b441e"},
 ]
 
 [package.dependencies]
@@ -1701,4 +1701,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "0af600150501595387e4ae887572b3f3bc2f4429385f3d99a3716ba10838037c"
+content-hash = "5665ba76655735be2da552a86f6a31b332dfbe7dc2a0b7f5c41fe5568af4a4d3"
