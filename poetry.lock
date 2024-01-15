@@ -1333,19 +1333,19 @@ files = [
 
 [[package]]
 name = "python-schema-registry-client"
-version = "2.5.3"
+version = "2.5.4"
 description = "Python Rest Client to interact against Schema Registry confluent server"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "python_schema_registry_client-2.5.3-py3-none-any.whl", hash = "sha256:ef22b61bc75cb383169d1cb4a8647aead0f3ecf32c7468986a9eba6e16fa1e1d"},
-    {file = "python_schema_registry_client-2.5.3.tar.gz", hash = "sha256:d2adbca03e656977a28299c950ad6d05670f68283e817b1da251fcd25e1b441e"},
+    {file = "python_schema_registry_client-2.5.4-py3-none-any.whl", hash = "sha256:6b8bedd3081d6abd9b750364b4ccd81f1beaac9c0bb34a4d44fcc5bd8696928d"},
+    {file = "python_schema_registry_client-2.5.4.tar.gz", hash = "sha256:792400e49b570f2f3ff18b274f291e1f802e8ba225335b2ad0ad87c4ce11c8bd"},
 ]
 
 [package.dependencies]
 aiofiles = ">=23.1.0,<24.0.0"
 fastavro = ">=1.7.3,<2.0.0"
-httpx = ">=0.24.0,<0.25.0"
+httpx = ">=0.24,<0.25"
 jsonschema = ">=4.17.3,<5.0.0"
 
 [package.extras]
@@ -1699,4 +1699,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "f60049028c4bd62f6ed87e0f01911e4dc9b2c04c04a491fec99bd75011ad777e"
+content-hash = "95f3cd7fd0f71f9db895ee28570d17837821a6d5bae81d8867d591c2939ef599"
