@@ -19,10 +19,10 @@ requests = "^2.31.0"
 python-dotenv = "^1.0.1"
 oracledb = "^2.0.1"
 python-benedict = "^0.33.1"
-google-api-python-client = "^2.116.0"
-google-cloud-secret-manager = "^2.18.0"
+google-api-python-client = "^2.117.0"
+google-cloud-secret-manager = "^2.18.1"
 confluent-kafka = "^2.3.0"
-pydantic = "^2.6.0"
+pydantic = "^2.6.1"
 
 
 [tool.poetry.dev-dependencies]
@@ -30,7 +30,7 @@ black = "^24.1.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
-python-schema-registry-client = "^2.5.4"
+python-schema-registry-client = "^2.5.5"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
