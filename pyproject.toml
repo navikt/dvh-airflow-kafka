@@ -41,6 +41,11 @@ build-backend = "poetry.core.masonry.api"
 minversion = "7.0"
 addopts = "-ra -q"
 pythonpath = "src"
+# Filtrerer ut DeprecationWarnings fra biblioteker når pytest kjører
+filterwarnings = [
+    "ignore::DeprecationWarning:pkg_resources",
+    "ignore::DeprecationWarning:google.rpc",
+]
 testpaths = [
     "src/tests",
 ]
