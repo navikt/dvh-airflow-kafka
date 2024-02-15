@@ -16,7 +16,7 @@ avro_schema_file = os.path.join(__location__, 'test.avsc')
 def mock_settings_env_vars():
     environment.isNotLocal = False
     test_env = {
-        "KAFKA_SCHEMA_REGISTRY": "http://127.0.0.1:8085",
+        "KAFKA_SCHEMA_REGISTRY": "http://127.0.0.1:8081",
         "KAFKA_SCHEMA_REGISTRY_USER": "",
         "KAFKA_SCHEMA_REGISTRY_PASSWORD": "",
         'KAFKA_BROKERS': "127.0.0.1:9092",
