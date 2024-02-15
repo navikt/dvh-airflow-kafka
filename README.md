@@ -133,6 +133,8 @@ py src/main -l
 ## Guide til Espens utviklingsmiljø
 Følg [Quick Start](https://docs.confluent.io/platform/current/platform-quickstart.html#) for å sette opp fullt testmiljø for confluent kafka i docker compose Frem til step 3
 
+Control center tilgjengelig på [http://localhost:9021/](http://localhost:9021/)
+
 Istedenfor å opprette ``users`` og ``pageviews`` topics, sett opp et topic med navn ``test`` med 3 partisjoner`og replication factor 1.
 
 ### Sett opp datagen for å lage mock data
@@ -145,6 +147,12 @@ Config:
 - iterations: 500 (Antall meldinger totalt, tror jeg)
 - schema.keyfield
 - quickstart: users
+
+### Kjøres tester med pytest
+
+pytest kjøres fra rotmappen inne i et virtualt miljø spawnet av poetry
+
+Liste alle definerte tester: ``pytest --co``
 
 
 ## Stop og slett alle containers
