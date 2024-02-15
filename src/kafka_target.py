@@ -9,6 +9,7 @@ from uuid import uuid4
 from confluent_kafka.serialization import StringSerializer, SerializationContext, MessageField
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroSerializer
+from config import SchemaType, KeyDecoder
 
 
 def chk_dict(dikt, ctx) -> Dict[Text, Any]:
@@ -34,11 +35,11 @@ class KafkaTarget(Target):
         self.producer = self.create_connection()
 
     def _init_value_serializer(self):
-        if self.config["schema"] == "avro":
+        if self.config.schema_type == SchemaType.AVRO:
             return self.avro_serializer()
-        elif self.config["schema"] == "json":
+        elif self.config.schema_type == SchemaType.JSON:
             raise NotImplementedError
-        elif self.config["schema"] == "string":
+        elif self.config.schema_type == SchemaType.STRING:
             raise NotImplementedError
         else:
             raise AssertionError
@@ -76,7 +77,7 @@ class KafkaTarget(Target):
 
     def write_batch(self, batch: List[Dict[Text, Any]]) -> None:
         self.producer.poll(0.0)
-        topic = self.config['topic']
+        topic = self.config.topic
         ctx = SerializationContext(topic, MessageField.VALUE)
         for message in batch:
             self.producer.produce(
