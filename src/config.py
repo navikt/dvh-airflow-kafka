@@ -58,6 +58,7 @@ class KeyDecoder(StrEnum):
 
 class TargetType(StrEnum):
     ORACLE = "oracle"
+    KAFKA = "kafka"
 
 
 class SourceConfig(BaseModel):
@@ -85,8 +86,10 @@ class TargetConfig(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     type: TargetType
-    custom_config: list = Field(alias="custom-config")
+    custom_config: Optional[list] = Field([], alias="custom-config")
+    schema_type: SchemaType = Field(alias="schema")
     table: str
+    topic: Optional[str] = None
     delta: Optional[dict] = None
     skip_duplicates_with: Optional[list] = Field([], alias="skip-duplicates-with")
     k6_filter: Optional[K6Filter] = Field(None, alias="k6-filter")
