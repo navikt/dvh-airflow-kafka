@@ -1,8 +1,5 @@
 import pytest
-import os
-import yaml
 import json
-import environment
 
 from kafka import KafkaProducer, KafkaConsumer
 from kafka.errors import KafkaError
