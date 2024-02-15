@@ -130,8 +130,22 @@ py src/main -l
 
 `d push ghcr.io/navikt/dvh-kafka-airflow-consumer:0.3.`
 
-## cd til Espens utviklingsmiljø prosjektmappe
-``cd /mnt/c/Dev/datavarehus/dvh-airflow-kafka/utviklingsmiljo/``
+## Guide til Espens utviklingsmiljø
+Følg [Quick Start](https://docs.confluent.io/platform/current/platform-quickstart.html#) for å sette opp fullt testmiljø for confluent kafka i docker compose Frem til step 3
+
+Istedenfor å opprette ``users`` og ``pageviews`` topics, sett opp et topic med navn ``test`` med 3 partisjoner`og replication factor 1.
+
+### Sett opp datagen for å lage mock data
+Bruk [kafka-connect-datagen](https://github.com/confluentinc/kafka-connect-datagen/blob/master/README.md) til å produsere meldinger på test-topic via control center. Bruk da følgende konfig:
+
+Config:
+- Name: test-generator
+- kafka.topic: test
+- max.interval: 1000
+- iterations: 500 (Antall meldinger totalt, tror jeg)
+- schema.keyfield
+- quickstart: users
+
 
 ## Stop og slett alle containers
 `docker ps -aq | xargs docker stop | xargs docker rm`
