@@ -6,6 +6,8 @@ from transform import int_ms_to_date
 import logging
 import pytz
 
+from config import OracleTargetConfig
+
 
 class OracleTarget(Target):
     """Oracle Target"""
@@ -13,7 +15,7 @@ class OracleTarget(Target):
     connection_class = oracledb.connect
 
     def __init__(self, config: Dict[Text, Any]) -> None:
-        super().__init__(config)
+        super().__init__(OracleTargetConfig(**config))
         if self.config.delta is not None:
             os.environ["DATA_INTERVAL_START"] = self.get_latest_timestamp_for_delta()
 

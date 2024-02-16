@@ -9,7 +9,7 @@ from uuid import uuid4
 from confluent_kafka.serialization import StringSerializer, SerializationContext, MessageField
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroSerializer
-from config import SchemaType, KeyDecoder
+from config import KafkaTargetConfig, SchemaType, KeyDecoder
 
 
 def chk_dict(dikt, ctx) -> Dict[Text, Any]:
@@ -29,7 +29,7 @@ def delivery_report(err, msg):
 
 class KafkaTarget(Target):
     def __init__(self, config: Dict[Text, Any]) -> None:
-        super().__init__(config)
+        super().__init__(KafkaTargetConfig(**config))
         self.value_serializer = self._init_value_serializer()
         self.key_serializer = StringSerializer('utf_8')
         self.producer = self.create_connection()

@@ -22,8 +22,8 @@ class Source:
 class Target:
     connection_class: Any = NotImplemented
 
-    def __init__(self, config: Dict[Text, Any]) -> None:
-        self.config = TargetConfig(**config)
+    def __init__(self, config: TargetConfig) -> None:
+        self.config = config
         # self.connection = self.create_connection()
 
     def create_connection(self) -> object:

@@ -83,16 +83,23 @@ class K6Filter(BaseModel):
 
 
 class TargetConfig(BaseModel):
+    pass
+
+class OracleTargetConfig(TargetConfig):
     model_config = ConfigDict(use_enum_values=True)
 
     type: TargetType
-    custom_config: Optional[list] = Field([], alias="custom-config")
-    schema_type: SchemaType = Field(alias="schema")
+    custom_config: list = Field(alias="custom-config")
     table: str
-    topic: Optional[str] = None
     delta: Optional[dict] = None
     skip_duplicates_with: Optional[list] = Field([], alias="skip-duplicates-with")
     k6_filter: Optional[K6Filter] = Field(None, alias="k6-filter")
     custom_insert: str = Field(
         None, description="Filepath to custom sql file", alias="custom-insert"
     )
+
+class KafkaTargetConfig(TargetConfig):
+    model_config = ConfigDict(use_enum_values=True)
+    type: TargetType
+    schema_type: SchemaType = Field(alias="schema")
+    topic: Optional[str] = None
