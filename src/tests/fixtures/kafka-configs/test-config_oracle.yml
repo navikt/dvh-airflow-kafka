@@ -1,0 +1,26 @@
+source:
+  type: kafka
+  batch-size: 50
+  batch-interval: 5
+  topic: avro-topic
+  schema: avro
+  group-id: local-test
+  keypath-seperator: /
+target:
+  type: oracle
+  custom-config:
+  - method: oracledb.Cursor.setinputsizes
+    name: kafka_timestamp
+    value: oracledb.TIMESTAMP
+  delta:
+    column: kafka_timestamp
+    table: DVH_TEST.RAA_POA_PERIODE_STROM
+  table: DVH_TEST.RAA_POA_PERIODE_STROM
+  skip-duplicates-with: 
+    - kafka_offset
+    - kafka_partition
+transform:
+  - src: kafka_message
+    dst: kafka_message
+  - src: id
+    dst: id

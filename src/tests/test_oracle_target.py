@@ -8,6 +8,9 @@ import yaml
 
 import oracledb
 
+from fixtures.fixtures import test_config_oracle
+from oracle_target import OracleTarget
+
 
 
 # sample subclassed Connection which overrides the constructor (so no
@@ -51,7 +54,8 @@ def mock_settings_env_vars( ):
     pass
 
 @pytest.mark.unit
-def test_connection(test_config):
+def test_connection(test_config_oracle):
+    target = OracleTarget(config=test_config_oracle["target"])
     assert False
 
 
