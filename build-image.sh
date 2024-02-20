@@ -7,5 +7,5 @@ read version
 echo "Authenticate to GitHub container registry (ghcr.io)"
 docker login ghcr.io
 
-docker build . -t ghcr.io/navikt/dvh-kafka-airflow-consumer:$version
-docker push ghcr.io/navikt/dvh-kafka-airflow-consumer:$version
+docker build . -t ghcr.io/navikt/dvh-kafka-airflow-consumer-endr:$version
+docker push ghcr.io/navikt/dvh-kafka-airflow-consumer-endr:$version
