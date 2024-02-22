@@ -95,7 +95,9 @@ class OracleTarget(Target):
                             "oracledb.Cursor.setinputsizes"
                         )
                     )
-                    cur.executemany(sql, batch)
+                    for record in batch:
+                        print(f"Executing SQL for record: {record}")
+                    cur.execute(sql, record)
                 con.commit()
             except oracledb.DatabaseError as e:
                 (error,) = e.args
