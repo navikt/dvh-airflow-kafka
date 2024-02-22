@@ -103,5 +103,6 @@ class OracleTarget(Target):
                 logging.error(f"oracle message: {error.message}")
                 logging.error(f"oracle context: {error.context}")
                 logging.error(f"oracle sql statement: {sql}")
+                logging.error(f"feil data er: {batch}")
                 logging.error(f"oracle batch of size: {len(batch)}")
                 raise
