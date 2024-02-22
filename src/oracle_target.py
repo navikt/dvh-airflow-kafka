@@ -96,7 +96,7 @@ class OracleTarget(Target):
                         )
                     )
                     for record in batch:
-                        print(f"Executing SQL for record: {record}")
+                        print(f"Executing SQL for rad: {record}")
                     cur.execute(sql, record)
                 con.commit()
             except oracledb.DatabaseError as e:
@@ -106,5 +106,6 @@ class OracleTarget(Target):
                 logging.error(f"oracle context: {error.context}")
                 logging.error(f"oracle sql statement: {sql}")
                 logging.error(f"feil data er: {batch}")
+                logging.error(f"feil i record : {record}")
                 logging.error(f"oracle batch of size: {len(batch)}")
                 raise
