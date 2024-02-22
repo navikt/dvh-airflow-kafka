@@ -97,8 +97,8 @@ class OracleTarget(Target):
                     )
                     for record in batch:
                         print(f"Executing SQL for rad: {record}")
-                    cur.execute(sql, record)
-                con.commit()
+                        cur.execute(sql, record)
+                        con.commit()
             except oracledb.DatabaseError as e:
                 (error,) = e.args
                 logging.error(f"oracle code: {error.code}")
