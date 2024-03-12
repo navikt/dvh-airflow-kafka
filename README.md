@@ -11,16 +11,8 @@ DVH-AIRFLOW-KAFKA bruker `google secret manager` for å laste inn hemligheter fo
 
 Vi anbefaler å legge inn kafka hemligheten i `SOURCE_SECRET_PATH` og oracle hemlighetene i `TARGET_SECRET_PATH`. Alternativt kan de kombineres i en hemliget som angis av `PROJECT_SECRET_PATH`
 
-Dette er miljøvariablene som forventes i SOURCE:
-```json
-{
-  "DB_USER": "user",
-  "DB_PASSWORD": "password",
-  "DB_DSN": "dsn",
-}
-```
 
-Dette er miljøvariablene som forventes i TARGET:
+Dette er miljøvariablene som forventes i SOURCE:
 ```json
 {
   "KAFKA_BROKERS": "",
@@ -32,6 +24,15 @@ Dette er miljøvariablene som forventes i TARGET:
   "KAFKA_SCHEMA_REGISTRY_PASSWORD": "",
   "KAFKA_SCHEMA_REGISTRY_USER": "",
   "KAFKA_SECRET_UPDATED": "",
+}
+```
+
+Dette er miljøvariablene som forventes i TARGET:
+```json
+{
+  "DB_USER": "user",
+  "DB_PASSWORD": "password",
+  "DB_DSN": "dsn",
 }
 ```
 

@@ -17,7 +17,7 @@ class OracleTarget(Target):
         if self.config.delta is not None:
             os.environ["DATA_INTERVAL_START"] = self.get_latest_timestamp_for_delta()
 
-    def _oracle_connection(self) -> oracledb.connect:
+    def _oracle_connection(self) -> oracledb.Connection:
         return OracleTarget.connection_class(
             user=os.environ["DB_USER"],
             password=os.environ["DB_PASSWORD"],
