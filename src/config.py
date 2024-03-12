@@ -85,7 +85,7 @@ class TargetConfig(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     type: TargetType
-    custom_config: list = Field(alias="custom-config")
+    custom_config: list = Field([], alias="custom-config")
     table: str
     delta: Optional[dict] = None
     skip_duplicates_with: Optional[list] = Field([], alias="skip-duplicates-with")

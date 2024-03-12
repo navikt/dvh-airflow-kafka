@@ -84,3 +84,9 @@ def test_target_config_k6filter(target_config):
 
     target_config["k6-filter"] = None
     TargetConfig(**target_config)
+
+
+def test_target_config_no_custom_config(target_config):
+    target_config.pop("custom-config")
+
+    TargetConfig(**target_config)
