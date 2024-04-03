@@ -13,6 +13,7 @@ def base_config():
       topic: teampam.stilling-dvh-5
       group-id: dvh_arb_stilling_konsument
       schema: avro
+      poll-timeout: 1
     target:  
       type: oracle
       custom-config:
@@ -90,3 +91,14 @@ def test_target_config_no_custom_config(target_config):
     target_config.pop("custom-config")
 
     TargetConfig(**target_config)
+
+
+def test_source_poll_config_default_is_10(source_config):
+    source_config.pop("poll-timeout")
+    config = SourceConfig(**source_config)
+    assert config.poll_timeout == 10
+
+
+def test_source_poll_alias_works(source_config):
+    config = SourceConfig(**source_config)
+    assert config.poll_timeout == 1

@@ -72,6 +72,11 @@ class SourceConfig(BaseModel):
     key_decoder: KeyDecoder = Field("utf-8", alias="key-decoder")
     keypath_separator: Optional[str] = Field(None, alias="keypath-seperator")
     message_fields_filter: Optional[list] = Field(None, alias="message-fields-filter")
+    poll_timeout: int = Field(
+        10,
+        alias="poll-timeout",
+        description="confluent kafka poll timeout (seconds), -1 means infinite",
+    )
 
 
 class K6Filter(BaseModel):

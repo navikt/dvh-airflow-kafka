@@ -223,7 +223,7 @@ class KafkaSource(Source):
         empty_counter, non_empty_counter = 0, 0
         assignment_count = len(self.consumer.assignment())
         while assignment_count > 0:
-            message: Message | None = self.consumer.poll(timeout=10)
+            message: Message | None = self.consumer.poll(timeout=self.config.poll_timeout)
             if message is None:
                 empty_counter += 1
                 continue
