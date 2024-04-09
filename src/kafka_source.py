@@ -293,7 +293,7 @@ class KafkaSource(Source):
             logging.warning(f"found {empty_counter} empty messages")
 
     def get_consumer(self) -> Consumer:
-        """Returnerer en kafka konsument som har abbonert på et topic"""
+        """Returnerer en kafka konsument som har abonert på et topic"""
         consumer = Consumer(self._kafka_config())
         consumer.subscribe([self.config.topic])
         return consumer
