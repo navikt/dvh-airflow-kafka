@@ -295,5 +295,5 @@ class KafkaSource(Source):
     def get_consumer(self) -> Consumer:
         """Returnerer en kafka konsument som har abbonert på et topic"""
         consumer = Consumer(self._kafka_config())
-        consumer.subscribe(self.config.topic)
+        consumer.subscribe([self.config.topic])
         return consumer
