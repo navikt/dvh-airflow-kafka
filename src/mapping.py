@@ -81,7 +81,7 @@ class Mapping:
             self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
             logging.info("Committing offset after batch insert")
             consumer.commit()
-            logging.info(f"Posisjoner etter siste commit {consumer.comitted()}")
+            logging.info(f"Posisjoner etter siste commit {consumer.committed()}")
 
         logging.info("Committing offset after batch insert")
         consumer.commit()
