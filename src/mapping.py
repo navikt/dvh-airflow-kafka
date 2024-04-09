@@ -82,7 +82,8 @@ class Mapping:
             logging.info("Committing offset after batch insert")
             consumer.commit()
 
-        logging.info("Committing offset after batch insert")
+        logging.info("Committing offset after last batch insert")
+        logging.info(f"{total_messages} messages consumed")
         consumer.commit()
         consumer.close()
 
