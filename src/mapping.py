@@ -58,7 +58,7 @@ class Mapping:
             )
 
             if not messages:  # No messages
-                logging.info("Slutten av kafka log. Avslutter")
+                logging.info("End of kafka log. Exiting")
                 break
             batch = []
             for m in messages:
