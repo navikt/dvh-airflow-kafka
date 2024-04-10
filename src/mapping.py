@@ -1,6 +1,10 @@
-from base import Source, Target
+from kafka_source import KafkaSource, KafkaError
+from oracle_target import OracleTarget
 from transform import Transform
 import environment
+
+from config import KafkaConsumerStrategy
+import logging
 
 
 class Mapping:
@@ -8,8 +12,8 @@ class Mapping:
 
     def __init__(
         self,
-        source: Source,
-        target: Target,
+        source: KafkaSource,
+        target: OracleTarget,
         transform: Transform,
     ) -> None:
         """
@@ -27,7 +31,7 @@ class Mapping:
         self.transform = transform
         self.total_messages = 0
 
-    def run(self) -> None:
+    def run_assign(self) -> None:
         total_messages = 0
         for batch in self.source.read_polled_batches():
             total_messages += len(batch)
@@ -41,3 +45,50 @@ class Mapping:
         if environment.isNotLocal:
             with open("/airflow/xcom/return.json", "w") as xcom:
                 xcom.write(str(total_messages))
+
+    def run_subscribe(self) -> None:
+        READ_TO_END = True
+        total_messages = 0
+        consumer = self.source.get_consumer()
+
+        while READ_TO_END:
+
+            messages = consumer.consume(
+                num_messages=self.source.config.batch_size, timeout=self.source.config.poll_timeout
+            )
+
+            if not messages:  # No messages
+                logging.info("End of kafka log. Exiting")
+                break
+            batch = []
+            for m in messages:
+                err: KafkaError | None = m.error()
+                if err:
+                    logging.warning(f"Message returned error {err}")
+
+                else:  # Handle proper message
+                    batch.append(self.source.collect_message(msg=m))
+
+            total_messages += len(batch)
+
+            k6_conf = self.target.config.k6_filter
+            if k6_conf:
+                kode67_personer = set(*zip(*self.target.get_kode67(batch)))
+                for msg in batch:
+                    if msg.get(k6_conf.col) in kode67_personer:
+                        msg["kafka_message"] = None
+
+            self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
+            logging.info("Committing offset after batch insert")
+            consumer.commit()
+
+        logging.info("Committing offset after last batch insert")
+        logging.info(f"{total_messages} messages consumed")
+        consumer.commit()
+        consumer.close()
+
+    def run(self) -> None:
+        if self.source.config.strategy == KafkaConsumerStrategy.ASSIGN:
+            return self.run_assign()
+        if self.source.config.strategy == KafkaConsumerStrategy.SUBSCRIBE:
+            return self.run_subscribe()

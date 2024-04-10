@@ -291,3 +291,9 @@ class KafkaSource(Source):
         logging.info(f"Completed with {non_empty_counter} events consumed")
         if empty_counter > 0:
             logging.warning(f"found {empty_counter} empty messages")
+
+    def get_consumer(self) -> Consumer:
+        """Returnerer en kafka konsument som har abonnert på et topic"""
+        consumer = Consumer(self._kafka_config())
+        consumer.subscribe([self.config.topic])
+        return consumer

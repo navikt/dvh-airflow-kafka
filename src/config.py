@@ -60,6 +60,11 @@ class TargetType(StrEnum):
     ORACLE = "oracle"
 
 
+class KafkaConsumerStrategy(StrEnum):
+    ASSIGN = "assign"
+    SUBSCRIBE = "subscribe"
+
+
 class SourceConfig(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
@@ -76,6 +81,10 @@ class SourceConfig(BaseModel):
         10,
         alias="poll-timeout",
         description="confluent kafka poll timeout (seconds), -1 means infinite",
+    )
+    strategy: KafkaConsumerStrategy = Field(
+        KafkaConsumerStrategy.ASSIGN,
+        description="subscribe -> use offsets from consumer group, assign -> get offsets based om provided timestamps",
     )
 
 
