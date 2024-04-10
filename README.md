@@ -51,10 +51,16 @@ source:
   batch-interval: 5
   # Kafka topic som skal kobles til som kilde
   topic: topic-navn
-  # Et unikt group id som skal identfirseres som en subscriber på topicet. Viktig at det er unikt hvis samme konsument skal ha flere subscribtions
+  # Et unikt group id som skal identfirseres som en subscriber på topicet. Hvis du å lese fra start anbefales det å lage en ny group-id, f.eks gruppe-id-v*
   group-id: gruppe-id
   # Type skjema. String er rå streng. Alt aksepteres. JSON skjema har struktur. Avro er streng på datatyper og nullverdier.
   schema: json | avro | string
+  # Hvor mange sekunder konsumenten poller før timeout
+  poll-timeout: 10 # default 10
+  # Velg om du ønsker en konsument som bruker tidsstempel fra bruker til å bestemme offset som skal konsumeres, eller om offset per partisjon comittes til kafka.
+  # assign: konsumenten bruker DATA_INTERVAL_START/DATA_INTERVAL_END
+  # subscribe: konsumenten comitter offset etter hver batch og fortsetter fra offset som er lagret på topic
+  strategy: assign | subscribe # default assign
 # Mål
 target:
   # Kun Oracle er støttet for øyeblikket
@@ -77,7 +83,14 @@ target:
   # Hvis du ønsker å filtrere duplikater fra kilde. Tar en liste med en eller flere kolonner.
   skip-duplicates-with: 
     # Hvilke kolonner som til sammen skal være unike.
-    - kafka_hash
+    - kafka_partition
+    - kafka_offset
+    - kafka_topic
+  # Fjerner feltene key1 og key3 fra json-objektet før det sendes til oracle
+  keypath-seperator: /
+  message-fields-filter:
+    - key1
+    - key2/key3
 # Mapping mellom kildekolonne og målkolonne
 transform:
   - src: kafka_key
