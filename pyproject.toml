@@ -17,16 +17,16 @@ dataverk-vault = "^0.1.10"
 PyYAML = "^6.0"
 requests = "^2.31.0"
 python-dotenv = "^1.0.1"
-oracledb = "^2.1.1"
+oracledb = "^2.1.2"
 python-benedict = "^0.33.2"
 google-api-python-client = "^2.125.0"
 google-cloud-secret-manager = "^2.19.0"
 confluent-kafka = "^2.3.0"
-pydantic = "^2.6.4"
+pydantic = "^2.7.0"
 
 
 [tool.poetry.dev-dependencies]
-black = "^24.3.0"
+black = "^24.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"
