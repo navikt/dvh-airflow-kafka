@@ -1,5 +1,5 @@
 # Oppsett av ny kafka-konsument
-Denne guiden krever følgende verktøy installert: [naisdevice](https://doc.nais.io/device/), [nais-cli](https://doc.nais.io/cli/install/), [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl), [gcloud cli](https://cloud.google.com/sdk/docs/install)
+Denne guiden krever følgende verktøy installert: [naisdevice](https://doc.nais.io/how-to-guides/naisdevice/install/), [nais-cli](https://doc.nais.io/how-to-guides/nais-cli/install/), [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl), [gcloud cli](https://cloud.google.com/sdk/docs/install)
 
 Sette opp en [NAIS applikasjon](https://doc.nais.io/basics/access/?h=kubectl) fra laptop
 
