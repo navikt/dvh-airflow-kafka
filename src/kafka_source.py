@@ -73,7 +73,7 @@ class KafkaSource(Source):
             dictionary.remove(filter_config)
 
         kafka_hash = hashlib.sha256(message_value).hexdigest()
-        kafka_message = json.dumps(dictionary, ensure_ascii=False)
+        kafka_message = json.dumps(dictionary, ensure_ascii=False).encode('UTF-8')
 
         dictionary["kafka_message"] = kafka_message
         dictionary["kafka_hash"] = kafka_hash
