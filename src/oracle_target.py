@@ -89,7 +89,7 @@ class OracleTarget(Target):
                 else:
                     index = columns.index(replace_column)
                     columns[index] = f"fk_person1"
-                    sql += f" left join dt_person.ident_off_id_til_fk_person1 on {table}.{replace_column} = dt_person.ident_off_id_til_fk_person1.person_ident where 1=1"
+                    sql += f" left join dt_person.ident_off_id_til_fk_person1 on {table}.{replace_column} = dt_person.ident_off_id_til_fk_person1.off_id where 1=1"
 
             duplicate_column = self.config.skip_duplicates_with
             if duplicate_column:
