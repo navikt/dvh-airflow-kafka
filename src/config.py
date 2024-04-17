@@ -88,6 +88,7 @@ class TargetConfig(BaseModel):
     custom_config: list = Field(alias="custom-config")
     table: str
     delta: Optional[dict] = None
+    replace_person_ident_with_fk_person1: Optional[str] = Field(None, alias="replace-person-ident-with-fk-person1")
     skip_duplicates_with: Optional[list] = Field([], alias="skip-duplicates-with")
     k6_filter: Optional[K6Filter] = Field(None, alias="k6-filter")
     custom_insert: str = Field(

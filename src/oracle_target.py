@@ -80,6 +80,17 @@ class OracleTarget(Target):
             columns = list(batch[0].keys())
             sql = f"insert into {table} ({','.join(columns)}) select :{',:'.join(columns)} from dual where 1=1"
 
+            replace_column = self.config.replace_person_ident_with_fk_person1
+            if replace_column:
+                if replace_column not in columns:
+                    column_list = ', '.join(columns)
+                    error_message = f"replace_column '{replace_column}' not found in columns: {column_list}"
+                    raise ValueError(error_message)
+                else:
+                    index = columns.index(replace_column)
+                    columns[index] = f"fk_person1"
+                    sql += f" left join dt_person.ident_off_id_til_fk_person1 on {table}.{replace_column} = dt_person.ident_off_id_til_fk_person1.person_ident where 1=1"
+
             duplicate_column = self.config.skip_duplicates_with
             if duplicate_column:
                 duplicate_columns = [f"{item}=:{item}" for item in duplicate_column]
