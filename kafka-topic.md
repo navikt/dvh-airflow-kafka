@@ -1,11 +1,11 @@
 # Oppsett av ny kafka-konsument
 Denne guiden krever følgende verktøy installert: [naisdevice](https://doc.nais.io/how-to-guides/naisdevice/install/), [nais-cli](https://doc.nais.io/how-to-guides/nais-cli/install/), [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl), [gcloud cli](https://cloud.google.com/sdk/docs/install)
 
-Sette opp en [NAIS applikasjon](https://doc.nais.io/basics/access/?h=kubectl) fra laptop
+Sette opp en [NAIS applikasjon](https://doc.nais.io/how-to-guides/command-line-access/setup/?h=kubectl#2-install-kubectl) fra laptop
 
-- Konfigurer [kubectl](https://doc.nais.io/cli/commands/kubeconfig/)
+- Konfigurer [kubectl](https://doc.nais.io/reference/cli/kubeconfig/?h=kubeconfig)
     
-- lag en [Nais applikasjon yaml](https://doc.nais.io/persistence/kafka/application/#accessing-topics-from-an-application-on-legacy-infrastructure), eksempel i [dv-a-team-dags](https://github.com/navikt/dv-a-team-dags/blob/main/kafka_cred_prod.yaml)
+- lag en [Nais applikasjon yaml](https://doc.nais.io/how-to-guides/persistence/kafka/access-from-non-nais/index.html), eksempel i [dv-a-team-dags](https://github.com/navikt/dv-a-team-dags/blob/main/nais-applikasjoner/dv-a-team-arbeidssoker-konsument/kafka_cred_prod.yaml)
 - Deploy applikasjon til dev/prod
     ```bash
     kubectl apply -f kafka_cred_dev.yaml
