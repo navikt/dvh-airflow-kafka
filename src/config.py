@@ -70,7 +70,7 @@ class SourceConfig(BaseModel):
 
     type: SourceType
     batch_size: int = Field(alias="batch-size")
-    batch_interval: int = Field(alias="batch-interval")
+    batch_interval: int = Field(10, alias="batch-interval", deprecated=True)
     topic: str
     group_id: str = Field(alias="group-id")
     schema_type: SchemaType = Field(alias="schema")
