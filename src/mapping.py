@@ -81,6 +81,9 @@ class Mapping:
             self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
             logging.info("Committing offset after batch insert")
             consumer.commit()
+            last_offset = messages[-1].offset()
+            last_partition = messages[-1].partition()
+            logging.info(f"Last offset: {last_offset}, last partition: {last_partition}")
 
         logging.info("Committing offset after last batch insert")
         logging.info(f"{total_messages} messages consumed")
