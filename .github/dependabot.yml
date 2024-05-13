@@ -9,11 +9,13 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "sunday"
 
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "sunday"
     groups:
       pip:
         patterns:
@@ -22,3 +24,4 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "sunday"
