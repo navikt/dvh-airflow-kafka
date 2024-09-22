@@ -19,17 +19,17 @@ requests = "^2.32.3"
 python-dotenv = "^1.0.1"
 oracledb = "^2.4.1"
 python-benedict = "^0.33.2"
-google-api-python-client = "^2.144.0"
+google-api-python-client = "^2.146.0"
 google-cloud-secret-manager = "^2.20.2"
 confluent-kafka = "^2.5.3"
-pydantic = "^2.9.0"
+pydantic = "^2.9.2"
 
 
 [tool.poetry.dev-dependencies]
 black = "^24.8.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.3.2"
+pytest = "^8.3.3"
 python-schema-registry-client = "^2.6.0"
 
 [build-system]
