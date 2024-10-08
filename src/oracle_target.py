@@ -89,7 +89,7 @@ class OracleTarget(Target):
 
         with self._oracle_connection() as con:
             try:
-                logging.info(f"Starting insert og batch")
+                logging.info(f"Starting insert of batch")
                 with con.cursor() as cur:
                     cur.setinputsizes(
                         **self.get_kv_from_config_by_method(
