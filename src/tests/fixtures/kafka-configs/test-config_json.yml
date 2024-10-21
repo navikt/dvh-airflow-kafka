@@ -1,5 +1,5 @@
 source:
-  type: kafka-airflow
+  type: kafka
   batch-size: 50
   batch-interval: 5
   topic: test
