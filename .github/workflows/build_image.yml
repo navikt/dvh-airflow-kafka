@@ -27,7 +27,7 @@ jobs:
         with:
           config: ${{ vars.PERMISSIONS_CONFIG }}
 
-      - uses: actions/checkout@v4.2.1
+      - uses: actions/checkout@v4.2.2
 
       - name: "Add sha to environment variable"
         env:
