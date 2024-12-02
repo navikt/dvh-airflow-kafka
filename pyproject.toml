@@ -22,7 +22,7 @@ python-benedict = "^0.34.0"
 google-api-python-client = "^2.154.0"
 google-cloud-secret-manager = "^2.21.1"
 confluent-kafka = "^2.6.1"
-pydantic = "^2.10.1"
+pydantic = "^2.10.2"
 
 
 [tool.poetry.dev-dependencies]
