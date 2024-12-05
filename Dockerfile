@@ -1,4 +1,4 @@
-FROM navikt/python:3.11
+FROM python:3.12-slim
 LABEL org.opencontainers.image.source "https://github.com/navikt/dvh-airflow-kafka"
 
 USER root
@@ -14,3 +14,5 @@ RUN pip install poetry && \
 COPY src ./
 
 USER apprunner
+
+CMD ["python", "main.py"]
