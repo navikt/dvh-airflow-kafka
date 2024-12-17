@@ -31,10 +31,15 @@ black = "^24.10.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 python-schema-registry-client = "^2.6.0"
+testcontainers = "^4.9.0"
+sqlalchemy = "^2.0.36"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+test = "scripts:test"
 
 # Pytest config
 [tool.pytest.ini_options]

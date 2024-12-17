@@ -50,6 +50,7 @@ class Mapping:
         READ_TO_END = True
         total_messages = 0
         consumer = self.source.get_consumer()
+        # partitions = [id for id in consumer.list_topics().topics[self.config.topic].partitions.keys()]
 
         while READ_TO_END:
 
@@ -64,6 +65,8 @@ class Mapping:
             for m in messages:
                 err: KafkaError | None = m.error()
                 if err:
+                    if err.code() == KafkaError._PARTITION_EOF:
+                        logging.info(f"End of log for partition {m.partition()}")
                     logging.warning(f"Message returned error {err}")
 
                 else:  # Handle proper message
@@ -77,7 +80,6 @@ class Mapping:
                 for msg in batch:
                     if msg.get(k6_conf.col) in kode67_personer:
                         msg["kafka_message"] = None
-
             self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
             logging.info("Committing offset after batch insert")
             consumer.commit()

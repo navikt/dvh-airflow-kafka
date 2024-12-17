@@ -10,9 +10,7 @@ class Source:
     def __init__(self, config: Dict[Text, Any]) -> None:
         self.config = SourceConfig(**config)
 
-    def read_batches(
-        self, *args, **kwargs
-    ) -> Generator[List[Dict[Text, Any]], None, None]:
+    def read_batches(self, *args, **kwargs) -> Generator[List[Dict[Text, Any]], None, None]:
         raise NotImplementedError
 
     def read_once(self, *args, **kwargs) -> Dict[Text, Any]:

@@ -56,9 +56,7 @@ class KafkaSource(Source):
         elif self.config.key_decoder == KeyDecoder.UTF_8:
             return x.decode("utf-8")
         else:
-            raise ValueError(
-                f"Decode: {self.config.key_decoder} not valid. Use utf-8 or int-64"
-            )
+            raise ValueError(f"Decode: {self.config.key_decoder} not valid. Use utf-8 or int-64")
 
     def _json_deserializer(self, message_value: bytes) -> Dict[Text, Any]:
         if message_value is None:
@@ -129,7 +127,7 @@ class KafkaSource(Source):
             "group.id": self.config.group_id,
         }
 
-        if environment.isNotLocal:
+        if False:
             config.update(
                 {
                     "ssl.certificate.pem": os.environ["KAFKA_CERTIFICATE"],
@@ -237,12 +235,8 @@ class KafkaSource(Source):
                     if err.code() == KafkaError._PARTITION_EOF:
                         err_topic = message.topic()
                         err_partition = message.partition()
-                        assert (
-                            err_topic is not None
-                        ), "Topic missing in EOF sentinel object"
-                        assert (
-                            err_partition is not None
-                        ), "Partition missing in EOF sentinel object"
+                        assert err_topic is not None, "Topic missing in EOF sentinel object"
+                        assert err_partition is not None, "Partition missing in EOF sentinel object"
                         self.consumer.incremental_unassign(
                             [TopicPartition(err_topic, err_partition)]
                         )
@@ -265,9 +259,7 @@ class KafkaSource(Source):
                             f" unassigned at offset ({message.offset()})"
                         )
 
-                if (len(batch) >= batch_size or assignment_count == 0) and len(
-                    batch
-                ) > 0:
+                if (len(batch) >= batch_size or assignment_count == 0) and len(batch) > 0:
                     logging.info("Yielding kafka batch.")
 
                     yield batch
@@ -277,8 +269,7 @@ class KafkaSource(Source):
                 error_message = "Bailing out..."
                 if batch:
                     error_message = (
-                        error_message
-                        + f", after writing all {len(batch)} messages in batch."
+                        error_message + f", after writing all {len(batch)} messages in batch."
                     )
                     yield batch
                 else:

@@ -40,13 +40,7 @@ def str_to_code(x: Optional[Text]) -> Text:
     if x is None:
         return "UKJENT"
 
-    y = (
-        "_".join(x.split())
-        .upper()
-        .replace("Æ", "A")
-        .replace("Ø", "O")
-        .replace("Å", "AA")
-    )
+    y = "_".join(x.split()).upper().replace("Æ", "A").replace("Ø", "O").replace("Å", "AA")
     y = "".join(filter(lambda x: x in "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_", y))
     y = "UKJENT" if y == "" else y
     return y
@@ -151,9 +145,7 @@ class Transform:
             return self.fun(item)
 
     def __init__(self, transforms: List[Dict[Text, Any]]) -> None:
-        self.rules: List[Transform.Rule] = [
-            Transform.Rule(transform) for transform in transforms
-        ]
+        self.rules: List[Transform.Rule] = [Transform.Rule(transform) for transform in transforms]
 
     def __call__(self, message: Dict[Text, Any]) -> Dict[Text, Any]:
         """Returns transformed message
@@ -166,7 +158,7 @@ class Transform:
 
         transformed_message = dict()
         batch_time = datetime.today()
-
+        ## TODO lokalt er det $$BATCH_TIME, i airflow brukes $$$BATCH_TIME
         for rule in self.rules:
             if rule.src[:2] == "$$":
                 if rule.src[2:] == "BATCH_TIME":

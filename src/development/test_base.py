@@ -1,6 +1,7 @@
 import pytest
 import yaml
-from base import Source, Target
+
+from ..base import Source, Target
 
 
 @pytest.fixture
