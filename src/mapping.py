@@ -1,9 +1,9 @@
-from kafka_source import KafkaSource, KafkaError
-from oracle_target import OracleTarget
-from transform import Transform
+from .kafka_source import KafkaSource, KafkaError
+from .oracle_target import OracleTarget
+from .transform import Transform
 import environment
 
-from config import KafkaConsumerStrategy
+from .config import KafkaConsumerStrategy
 import logging
 
 
@@ -55,7 +55,8 @@ class Mapping:
         while READ_TO_END:
 
             messages = consumer.consume(
-                num_messages=self.source.config.batch_size, timeout=self.source.config.poll_timeout
+                num_messages=self.source.config.batch_size,
+                timeout=self.source.config.poll_timeout,
             )
 
             if not messages:  # No messages

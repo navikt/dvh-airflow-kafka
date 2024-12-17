@@ -5,13 +5,13 @@ from dotenv import load_dotenv
 from argparse import ArgumentParser
 from typing import Text
 import yaml
-from mapping import Mapping
-from transform import Transform
-from kafka_source import KafkaSource
-from oracle_target import OracleTarget
+from .mapping import Mapping
+from .transform import Transform
+from .kafka_source import KafkaSource
+from .oracle_target import OracleTarget
 import environment
-from console_target import console_target
-from config import set_secrets_as_envs, SecretConfig
+from .console_target import console_target
+from .config import set_secrets_as_envs, SecretConfig
 
 parser = ArgumentParser()
 parser.add_argument("-l", "--local", action="store_true")

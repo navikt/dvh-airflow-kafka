@@ -8,13 +8,12 @@ import avro.schema
 import avro.io
 import requests
 import logging
-import traceback
 from benedict import benedict
 from confluent_kafka import Consumer, TopicPartition, Message
 from confluent_kafka.error import KafkaError
 import environment
-from base import Source
-from config import SchemaType, KeyDecoder
+from .base import Source
+from .config import SchemaType, KeyDecoder
 
 _CONFLUENT_SUBJECT_NOT_FOUND = 40401
 _CONFLUENT_VERSION_NOT_FOUND = 40402

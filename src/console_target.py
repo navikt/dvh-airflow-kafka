@@ -13,4 +13,3 @@ class console_target(Target):
     def get_kode67(self, batch: List[Dict[Text, Any]]) -> List[Tuple]:
         k67_list = [(1,), (2,)]
         return k67_list
-    
