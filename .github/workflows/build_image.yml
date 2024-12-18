@@ -19,7 +19,7 @@ permissions:
 env:
   IMAGE_NAME: "ghcr.io/${{ github.repository }}"
 jobs:
-  "build":
+  build:
     name: "build"
     runs-on: "ubuntu-latest"
     steps:
@@ -57,6 +57,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.IMAGE }}
+          tags: ${{ env.IMAGE_NAME }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

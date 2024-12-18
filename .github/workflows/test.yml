@@ -1,0 +1,24 @@
+name: Python CI
+
+on: [push, workflow_dispatch]
+
+env:
+  PYTHON_VERSION: 3.12
+  POETRY_VERSION: 1.5.1
+  
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - run: poetry install
+      - run: poetry run test
