@@ -40,6 +40,7 @@ def main() -> None:
     """Main consumer thread"""
     try:
         # run_arguments()
+        os.environ["ENVIRONMENT"] = "NOT_LOCAL"
         kafka_to_oracle_etl_mapping(os.environ["CONSUMER_CONFIG"]).run()
     except Exception as ex:
         error_text = ""

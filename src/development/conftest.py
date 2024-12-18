@@ -16,7 +16,7 @@ kafka = KafkaContainer()
 oracle = OracleDbContainer()
 n_kafka_messages = 20
 now = datetime(2024, 12, 18, 11, 11, 11)
-os.environ.get("ENVIRONMENT", "NOT_LOCAL") = "LOCAL"
+os.environ["ENVIRONMENT"] = "LOCAL"
 
 
 @pytest.fixture(scope="session")
