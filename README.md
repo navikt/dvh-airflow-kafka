@@ -4,6 +4,15 @@ dvh-airflow-kafka kan benyttes for å konsumere data fra kafka-topics i Aiven og
 
 Følg denne [guiden](kafka-topic.md) for å opprette en NAIS applikasjon som har tilgang til ønsket topic.
 
+## Lokal utvikling - kjøre tester
+
+```bash
+poetry run test
+poetry run pytest src/development/test_integration.py
+poetry run pytest src/development/test_integration.py::test_test_run_subscribe
+```
+
+
 ## Bruke kafka-konsument i Airflow
 DVH-AIRFLOW-KAFKA bruker `google secret manager` for å laste inn hemligheter for å koble til et kafka topic og oracle. Du angir navnet på hemlighetene slik at konsumenten kan laste inn hemlighetene som miljøvariabler. Som bruker har du disse mulighetene:
 1. `SOURCE_SECRET_PATH` & `TARGET_SECRET_PATH`

@@ -7,8 +7,8 @@ import uuid
 
 from testcontainers.kafka import KafkaContainer
 from testcontainers.oracle import OracleDbContainer
-
 from confluent_kafka import Consumer, Producer
+
 from ..oracle_target import OracleTarget
 from ..kafka_source import KafkaSource
 

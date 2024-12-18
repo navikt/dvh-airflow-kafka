@@ -4,18 +4,17 @@ import json
 import os
 import struct
 from typing import Generator, Dict, Text, Any, Tuple, List, Optional
+import logging
+
+import requests
 import avro.schema
 import avro.io
-import requests
-import logging
 from benedict import benedict
 from confluent_kafka import Consumer, TopicPartition, Message
 from confluent_kafka.error import KafkaError
+
 from .base import Source
 from .config import SchemaType, KeyDecoder
-
-_CONFLUENT_SUBJECT_NOT_FOUND = 40401
-_CONFLUENT_VERSION_NOT_FOUND = 40402
 
 SchemaCache = Dict[int, avro.io.DatumReader]
 

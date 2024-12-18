@@ -2,10 +2,10 @@ import pytest
 import os
 from datetime import datetime, timedelta
 
-from .conftest import now, n_kafka_messages
-
 from ..transform import Transform
 from ..mapping import Mapping
+
+from .conftest import now, n_kafka_messages
 
 
 def test_run_subscribe(kafka_source, oracle_target, transform_config):

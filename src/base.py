@@ -1,6 +1,6 @@
 from typing import Generator, Dict, Text, Any, List, Tuple
 from .config import SourceConfig, TargetConfig
-import oracledb
+import oracledb  # Må være her pga get_kv_from_config_by_method
 
 
 class Source:

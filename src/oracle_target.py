@@ -1,10 +1,12 @@
 import os
 from typing import Dict, Text, Any, List, Tuple
-import oracledb
-from .base import Target
-from .transform import int_ms_to_date
 import logging
 import pytz
+
+import oracledb
+
+from .base import Target
+from .transform import int_ms_to_date
 
 
 class OracleTarget(Target):

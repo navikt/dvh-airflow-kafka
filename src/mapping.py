@@ -1,7 +1,9 @@
 import os
 import logging
 
-from .kafka_source import KafkaSource, KafkaError
+from confluent_kafka import KafkaError
+
+from .kafka_source import KafkaSource
 from .oracle_target import OracleTarget
 from .transform import Transform
 from .config import KafkaConsumerStrategy
