@@ -42,7 +42,7 @@ class Mapping:
                     if msg.get(k6_conf.col) in kode67_personer:
                         msg["kafka_message"] = None
             self.target.write_batch(list(map(self.transform, batch)))
-        if os.environ.get("ENVIRONMENT", "NOT_LOCAL") != "LOCAL":
+        if os.environ["ENVIRONMENT"] != "LOCAL":
             with open("/airflow/xcom/return.json", "w") as xcom:
                 xcom.write(str(total_messages))
 

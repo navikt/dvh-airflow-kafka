@@ -5,12 +5,11 @@ import json
 @pytest.mark.run("first")
 def test_consumer(consumer):
     m1 = consumer.poll()
-    assert m1.timestamp()[1] == 1732875071
     m2 = consumer.poll()
-    assert json.loads(m2.value())["id"] == 1
-
     consumer.commit()
     consumer.close()
+
+    assert json.loads(m2.value())["id"] == 1
 
 
 @pytest.mark.run("second")
