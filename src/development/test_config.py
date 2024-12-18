@@ -1,6 +1,7 @@
-from .config import SourceConfig, TargetConfig
 import pytest
 import yaml
+
+from ..config import SourceConfig, TargetConfig
 
 
 @pytest.fixture

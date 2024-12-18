@@ -1,10 +1,12 @@
 import os
 from typing import Dict, Text, Any, List, Tuple
-import oracledb
-from base import Target
-from transform import int_ms_to_date
 import logging
 import pytz
+
+import oracledb
+
+from .base import Target
+from .transform import int_ms_to_date
 
 
 class OracleTarget(Target):
@@ -17,7 +19,8 @@ class OracleTarget(Target):
         if self.config.delta is not None:
             os.environ["DATA_INTERVAL_START"] = self.get_latest_timestamp_for_delta()
 
-    def _oracle_connection(self) -> oracledb.Connection:
+    @staticmethod
+    def _oracle_connection() -> oracledb.Connection:
         return OracleTarget.connection_class(
             user=os.environ["DB_USER"],
             password=os.environ["DB_PASSWORD"],
@@ -48,9 +51,7 @@ class OracleTarget(Target):
 
             # generating sequential sql bind variable names for the range of personidenter i batchen
             # example :1,:2,:3 etc
-            sequential_bind_variable_names = [
-                ":" + str(i + 1) for i in range(len(person_identer))
-            ]
+            sequential_bind_variable_names = [":" + str(i + 1) for i in range(len(person_identer))]
             in_bind_names = ",".join(sequential_bind_variable_names)
 
             bind_values = dict(zip(sequential_bind_variable_names, person_identer))
@@ -92,9 +93,7 @@ class OracleTarget(Target):
                 logging.info(f"Starting insert of batch")
                 with con.cursor() as cur:
                     cur.setinputsizes(
-                        **self.get_kv_from_config_by_method(
-                            "oracledb.Cursor.setinputsizes"
-                        )
+                        **self.get_kv_from_config_by_method("oracledb.Cursor.setinputsizes")
                     )
                     cur.executemany(sql, batch)
                 con.commit()

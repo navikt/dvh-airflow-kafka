@@ -1,10 +1,12 @@
-from kafka_source import KafkaSource, KafkaError
-from oracle_target import OracleTarget
-from transform import Transform
-import environment
-
-from config import KafkaConsumerStrategy
+import os
 import logging
+
+from confluent_kafka import KafkaError
+
+from .kafka_source import KafkaSource
+from .oracle_target import OracleTarget
+from .transform import Transform
+from .config import KafkaConsumerStrategy
 
 
 class Mapping:
@@ -42,7 +44,7 @@ class Mapping:
                     if msg.get(k6_conf.col) in kode67_personer:
                         msg["kafka_message"] = None
             self.target.write_batch(list(map(self.transform, batch)))
-        if environment.isNotLocal:
+        if os.environ["ENVIRONMENT"] != "LOCAL":
             with open("/airflow/xcom/return.json", "w") as xcom:
                 xcom.write(str(total_messages))
 
@@ -54,7 +56,8 @@ class Mapping:
         while READ_TO_END:
 
             messages = consumer.consume(
-                num_messages=self.source.config.batch_size, timeout=self.source.config.poll_timeout
+                num_messages=self.source.config.batch_size,
+                timeout=self.source.config.poll_timeout,
             )
 
             if not messages:  # No messages
@@ -64,6 +67,8 @@ class Mapping:
             for m in messages:
                 err: KafkaError | None = m.error()
                 if err:
+                    if err.code() == KafkaError._PARTITION_EOF:
+                        logging.info(f"End of log for partition {m.partition()}")
                     logging.warning(f"Message returned error {err}")
 
                 else:  # Handle proper message
@@ -77,7 +82,6 @@ class Mapping:
                 for msg in batch:
                     if msg.get(k6_conf.col) in kode67_personer:
                         msg["kafka_message"] = None
-
             self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
             logging.info("Committing offset after batch insert")
             consumer.commit()

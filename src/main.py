@@ -1,36 +1,25 @@
 import logging
 import traceback
 import os
-from dotenv import load_dotenv
-from argparse import ArgumentParser
 from typing import Text
 import yaml
-from mapping import Mapping
-from transform import Transform
-from kafka_source import KafkaSource
-from oracle_target import OracleTarget
-import environment
-from console_target import console_target
-from config import set_secrets_as_envs, SecretConfig
 
-parser = ArgumentParser()
-parser.add_argument("-l", "--local", action="store_true")
-parser.add_argument("-c", "--console", action="store_true")
+from .mapping import Mapping
+from .transform import Transform
+from .kafka_source import KafkaSource
+from .oracle_target import OracleTarget
+from .config import set_secrets_as_envs, SecretConfig
 
-args = parser.parse_args()
-if args.local:
-    load_dotenv("local.env")
-    environment.isNotLocal = False
+
+project_secret_path = os.environ.get("PROJECT_SECRET_PATH", None)
+if project_secret_path:
+    set_secrets_as_envs()
 else:
-    project_secret_path = os.environ.get("PROJECT_SECRET_PATH", None)
-    if project_secret_path:
-        set_secrets_as_envs()
-    else:
-        config = SecretConfig(
-            source_secret_path=os.environ["SOURCE_SECRET_PATH"],
-            target_secret_path=os.environ["TARGET_SECRET_PATH"],
-        )
-        config.load_secrets_to_env()
+    config = SecretConfig(
+        source_secret_path=os.environ["SOURCE_SECRET_PATH"],
+        target_secret_path=os.environ["TARGET_SECRET_PATH"],
+    )
+    config.load_secrets_to_env()
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 logging.basicConfig(
@@ -43,10 +32,7 @@ logging.basicConfig(
 def kafka_to_oracle_etl_mapping(config: Text):
     config = yaml.safe_load(stream=config)
     source = KafkaSource(config["source"])
-    if args.console:
-        target = console_target(config["target"])
-    else:
-        target = OracleTarget(config["target"])
+    target = OracleTarget(config["target"])
     transform = Transform(config["transform"])
     return Mapping(source, target, transform)
 
@@ -55,6 +41,7 @@ def main() -> None:
     """Main consumer thread"""
     try:
         # run_arguments()
+        os.environ["ENVIRONMENT"] = "NOT_LOCAL"
         kafka_to_oracle_etl_mapping(os.environ["CONSUMER_CONFIG"]).run()
     except Exception as ex:
         error_text = ""

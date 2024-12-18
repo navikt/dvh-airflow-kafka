@@ -1,5 +1,5 @@
-from typing import Generator, Dict, Text, Any, List, Tuple
-from base import Target
+from typing import Dict, Text, Any, List, Tuple
+from .base import Target
 
 
 class console_target(Target):
@@ -13,4 +13,3 @@ class console_target(Target):
     def get_kode67(self, batch: List[Dict[Text, Any]]) -> List[Tuple]:
         k67_list = [(1,), (2,)]
         return k67_list
-    

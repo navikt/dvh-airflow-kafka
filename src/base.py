@@ -1,7 +1,6 @@
 from typing import Generator, Dict, Text, Any, List, Tuple
-from config import SourceConfig, TargetConfig
-
-import oracledb
+from .config import SourceConfig, TargetConfig
+import oracledb  # Må være her pga get_kv_from_config_by_method
 
 
 class Source:
@@ -10,9 +9,7 @@ class Source:
     def __init__(self, config: Dict[Text, Any]) -> None:
         self.config = SourceConfig(**config)
 
-    def read_batches(
-        self, *args, **kwargs
-    ) -> Generator[List[Dict[Text, Any]], None, None]:
+    def read_batches(self, *args, **kwargs) -> Generator[List[Dict[Text, Any]], None, None]:
         raise NotImplementedError
 
     def read_once(self, *args, **kwargs) -> Dict[Text, Any]:
