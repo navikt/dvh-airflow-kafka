@@ -52,7 +52,6 @@ class Mapping:
         READ_TO_END = True
         total_messages = 0
         consumer = self.source.get_consumer()
-        # partitions = [id for id in consumer.list_topics().topics[self.config.topic].partitions.keys()]
 
         while READ_TO_END:
 

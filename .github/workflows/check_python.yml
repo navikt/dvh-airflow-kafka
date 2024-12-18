@@ -1,14 +1,6 @@
 name: Python CI
 
-on:
-    push:
-      branches:
-        - main
-        - feat**
-        - modernize
-      paths-ignore:
-        - '**.md'
-    workflow_dispatch:
+on: [push, workflow_dispatch]
 
 env:
   PYTHON_VERSION: 3.12
