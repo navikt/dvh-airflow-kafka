@@ -11,8 +11,8 @@ RUN pip install poetry && \
 
 WORKDIR /app
 
-COPY src /app
+COPY . /app
 
 USER apprunner
 
-CMD ["python", "main.py"]
+CMD ["python", "-m", "src.main"]

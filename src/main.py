@@ -3,11 +3,11 @@ import traceback
 import os
 from typing import Text
 import yaml
-from src.mapping import Mapping
-from src.transform import Transform
-from src.kafka_source import KafkaSource
-from src.oracle_target import OracleTarget
-from src.config import set_secrets_as_envs, SecretConfig
+from .mapping import Mapping
+from .transform import Transform
+from .kafka_source import KafkaSource
+from .oracle_target import OracleTarget
+from .config import set_secrets_as_envs, SecretConfig
 
 
 project_secret_path = os.environ.get("PROJECT_SECRET_PATH", None)
