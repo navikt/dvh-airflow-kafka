@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - image**
+      - modernize
     paths-ignore:
       - '**.md'
   workflow_dispatch:

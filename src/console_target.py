@@ -1,5 +1,5 @@
-from typing import Generator, Dict, Text, Any, List, Tuple
-from base import Target
+from typing import Dict, Text, Any, List, Tuple
+from .base import Target
 
 
 class console_target(Target):

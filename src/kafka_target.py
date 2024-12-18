@@ -2,7 +2,6 @@ import os
 from typing import Dict, Text, Any, List
 from .base import Target
 from confluent_kafka import Producer
-import environment
 
 from uuid import uuid4
 from confluent_kafka.serialization import (

@@ -2,6 +2,8 @@ import os
 import pytest
 import json
 import yaml
+from datetime import datetime, timedelta
+import uuid
 
 from testcontainers.kafka import KafkaContainer
 from testcontainers.oracle import OracleDbContainer
@@ -12,6 +14,9 @@ from ..kafka_source import KafkaSource
 
 kafka = KafkaContainer()
 oracle = OracleDbContainer()
+n_kafka_messages = 20
+now = datetime(2024, 12, 18, 11, 11, 11)
+os.environ.get("ENVIRONMENT", "NOT_LOCAL") = "LOCAL"
 
 
 @pytest.fixture(scope="session")
@@ -33,11 +38,11 @@ def broker():
     return broker
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def consumer_config(broker):
     return {
         "bootstrap.servers": broker,
-        "group.id": "my-group",
+        "group.id": str(uuid.uuid4()),
         "auto.offset.reset": "earliest",
         "enable.auto.commit": False,
         "max.poll.interval.ms": 12000,
@@ -69,13 +74,13 @@ def consumer(consumer_config, topic_name):
 @pytest.fixture(autouse=True, scope="module")
 def setUpKafka(producer, topic_name, broker):
     os.environ["KAFKA_BROKERS"] = broker
-    n_messages = 20
-    for i in range(n_messages):
+    for i in range(n_kafka_messages):
         producer.produce(
             topic_name,
             key=f"key{i}",
             value=json.dumps({"id": i, "value": f"Message {i}"}),
             partition=0,
+            timestamp=int(datetime.timestamp(now - timedelta(days=(n_kafka_messages - i - 1)))),
         )
     producer.flush()
 
@@ -109,6 +114,22 @@ def kafka_source(base_config):
 @pytest.fixture(scope="session")
 def oracle_target(base_config):
     return OracleTarget(base_config["target"])
+
+
+@pytest.fixture(scope="session")
+def kafka_source_assign(topic_name):
+    yaml_config = f"""
+    source:
+      type: kafka
+      batch-size: 10
+      batch-interval: 5
+      topic: {topic_name}
+      group-id: group1
+      schema: json
+      poll-timeout: 10
+      strategy: assign
+    """
+    return KafkaSource(yaml.safe_load(stream=yaml_config)["source"])
 
 
 @pytest.fixture(scope="session")

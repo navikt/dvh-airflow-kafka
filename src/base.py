@@ -1,6 +1,5 @@
 from typing import Generator, Dict, Text, Any, List, Tuple
-from config import SourceConfig, TargetConfig
-
+from .config import SourceConfig, TargetConfig
 import oracledb
 
 

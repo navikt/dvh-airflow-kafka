@@ -11,7 +11,6 @@ import logging
 from benedict import benedict
 from confluent_kafka import Consumer, TopicPartition, Message
 from confluent_kafka.error import KafkaError
-import environment
 from .base import Source
 from .config import SchemaType, KeyDecoder
 
@@ -126,7 +125,7 @@ class KafkaSource(Source):
             "group.id": self.config.group_id,
         }
 
-        if False:
+        if os.environ.get("ENVIRONMENT", "NOT_LOCAL") != "LOCAL":
             config.update(
                 {
                     "ssl.certificate.pem": os.environ["KAFKA_CERTIFICATE"],

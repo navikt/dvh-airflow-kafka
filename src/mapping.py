@@ -1,10 +1,10 @@
+import os
+import logging
+
 from .kafka_source import KafkaSource, KafkaError
 from .oracle_target import OracleTarget
 from .transform import Transform
-import environment
-
 from .config import KafkaConsumerStrategy
-import logging
 
 
 class Mapping:
@@ -42,7 +42,7 @@ class Mapping:
                     if msg.get(k6_conf.col) in kode67_personer:
                         msg["kafka_message"] = None
             self.target.write_batch(list(map(self.transform, batch)))
-        if environment.isNotLocal:
+        if os.environ.get("ENVIRONMENT", "NOT_LOCAL") != "LOCAL":
             with open("/airflow/xcom/return.json", "w") as xcom:
                 xcom.write(str(total_messages))
 
