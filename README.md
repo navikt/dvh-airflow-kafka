@@ -6,6 +6,8 @@ Følg denne [guiden](kafka-topic.md) for å opprette en NAIS applikasjon som har
 
 ## Lokal utvikling - kjøre tester
 
+Krever at [Docker-desktop](https://www.docker.com/products/docker-desktop/) og [Poetry](https://python-poetry.org/docs/) er installert.
+
 ```bash
 poetry run test
 poetry run pytest src/development/test_integration.py
