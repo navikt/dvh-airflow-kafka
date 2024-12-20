@@ -8,25 +8,14 @@ import uuid
 from testcontainers.kafka import KafkaContainer
 from testcontainers.oracle import OracleDbContainer
 from confluent_kafka import Consumer, Producer
+from confluent_kafka.admin import AdminClient, ConfigResource, NewTopic
 
 from ..oracle_target import OracleTarget
 from ..kafka_source import KafkaSource
 
 kafka = KafkaContainer()
 oracle = OracleDbContainer()
-n_kafka_messages = 20
-now = datetime(2024, 12, 18, 11, 11, 11)
 os.environ["ENVIRONMENT"] = "LOCAL"
-
-
-@pytest.fixture(scope="session")
-def topic_name():
-    return "test_topic"
-
-
-@pytest.fixture(scope="session")
-def table_name():
-    return "RAA_DATA_STROM"
 
 
 @pytest.fixture(scope="session")
@@ -44,9 +33,10 @@ def consumer_config(broker):
         "bootstrap.servers": broker,
         "group.id": str(uuid.uuid4()),
         "auto.offset.reset": "earliest",
-        "enable.auto.commit": False,
-        "max.poll.interval.ms": 12000,
-        "session.timeout.ms": 10000,
+        "enable.auto.commit": "false",
+        "max.poll.interval.ms": 300000,
+        "session.timeout.ms": 6000,
+        "enable.partition.eof": "true",
     }
 
 
@@ -57,79 +47,42 @@ def producer_config(broker):
     }
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
+def kafka_admin_client(producer_config):
+    return AdminClient(producer_config)
+
+
+@pytest.fixture(scope="session")
 def producer(producer_config):
     return Producer(producer_config)
 
 
-@pytest.fixture(scope="function")
-def consumer(consumer_config, topic_name):
-    # Create a Kafka consumer
+@pytest.fixture(scope="session")
+def table_name():
+    return "RAA_DATA_STROM"
 
+
+@pytest.fixture(scope="function")
+def consumer(consumer_config):
+    # Create a Kafka consumer
     consumer = Consumer(consumer_config)
-    consumer.subscribe([topic_name])
     return consumer
 
 
-@pytest.fixture(autouse=True, scope="module")
-def setUpKafka(producer, topic_name, broker):
-    os.environ["KAFKA_BROKERS"] = broker
-    for i in range(n_kafka_messages):
-        producer.produce(
-            topic_name,
-            key=f"key{i}",
-            value=json.dumps({"id": i, "value": f"Message {i}"}),
-            partition=0,
-            timestamp=int(datetime.timestamp(now - timedelta(days=(n_kafka_messages - i - 1)))),
-        )
-    producer.flush()
-
-
-@pytest.fixture(scope="session")
-def base_config(topic_name, table_name):
+@pytest.fixture
+def base_config():
     yaml_config = f"""
     source:
       type: kafka
-      batch-size: 10
-      batch-interval: 5
-      topic: {topic_name}
-      group-id: group1
+      batch-size: 1000
       schema: json
-      poll-timeout: 10
-      strategy: subscribe
+      poll-timeout: 6
     target:  
       type: oracle
-      table: {table_name}
       skip-duplicates-with: 
         - kafka_hash
     """
     return yaml.safe_load(stream=yaml_config)
-
-
-@pytest.fixture(scope="session")
-def kafka_source(base_config):
-    return KafkaSource(base_config["source"])
-
-
-@pytest.fixture(scope="session")
-def oracle_target(base_config):
-    return OracleTarget(base_config["target"])
-
-
-@pytest.fixture(scope="session")
-def kafka_source_assign(topic_name):
-    yaml_config = f"""
-    source:
-      type: kafka
-      batch-size: 10
-      batch-interval: 5
-      topic: {topic_name}
-      group-id: group1
-      schema: json
-      poll-timeout: 10
-      strategy: assign
-    """
-    return KafkaSource(yaml.safe_load(stream=yaml_config)["source"])
 
 
 @pytest.fixture(scope="session")
@@ -152,7 +105,7 @@ def transform_config():
     ]
 
 
-@pytest.fixture(autouse=True, scope="module")
+@pytest.fixture(autouse=True, scope="session")
 def setup_oracle(table_name, transform_config):
     oracle.start()
     url = oracle.get_connection_url()
@@ -161,6 +114,24 @@ def setup_oracle(table_name, transform_config):
     os.environ["DB_USER"] = "SYSTEM"
     os.environ["DB_PASSWORD"] = password
     os.environ["DB_DSN"] = dsn
+    columns = [f"{obj["dst"]} {obj["datatype"]}" for obj in transform_config]
+    sql = f"""create table SYSTEM.{table_name} ({",".join(columns)}) """
+
+    with OracleTarget._oracle_connection() as con:
+        with con.cursor() as cur:
+            cur.execute(sql)
+        con.commit()
+
+
+@pytest.fixture(autouse=True, scope="module")
+def setup_oracle_fixtures(table_name, transform_config):
+
+    sql = f"""drop table SYSTEM.{table_name} """
+
+    with OracleTarget._oracle_connection() as con:
+        with con.cursor() as cur:
+            cur.execute(sql)
+        con.commit()
 
     columns = [f"{obj["dst"]} {obj["datatype"]}" for obj in transform_config]
     sql = f"""create table SYSTEM.{table_name} ({",".join(columns)}) """

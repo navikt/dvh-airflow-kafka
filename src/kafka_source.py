@@ -122,6 +122,7 @@ class KafkaSource(Source):
             "enable.auto.commit": False,
             "bootstrap.servers": os.environ["KAFKA_BROKERS"],
             "group.id": self.config.group_id,
+            "enable.partition.eof": True,
         }
 
         if os.environ.get("ENVIRONMENT", "NOT_LOCAL") != "LOCAL":
@@ -223,7 +224,6 @@ class KafkaSource(Source):
                 empty_counter += 1
                 continue
             non_empty_counter += 1
-
             try:
                 err: KafkaError | None = message.error()
                 if err is not None:  # handle event or error
