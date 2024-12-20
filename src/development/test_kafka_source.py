@@ -25,9 +25,9 @@ def consumer_2(broker):
 
 
 @pytest.fixture(autouse=True)
-def setup_kafka_topic(kafka_admin_client, producer, consumer_2):
+def setup_kafka_topic(kafka_admin_client, producer):
 
-    res = kafka_admin_client.create_topics([NewTopic(topic, 2)])
+    kafka_admin_client.create_topics([NewTopic(topic, 2)])
     for i in range(4):
         producer.produce(
             topic,

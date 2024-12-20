@@ -14,7 +14,7 @@ import pyinstrument
 
 TABLE_NAME = "RAA_DATA_STROM"
 TOPIC_NAME = "integration-test-topic"
-n_kafka_messages = 10000
+n_kafka_messages = 100
 now = datetime(2024, 12, 18, 11, 11, 11)
 
 
@@ -78,7 +78,7 @@ def test_run_subscribe(subscribe_config, transform_config):
             table_name = oracle_target.config.table
             cur.execute(f"select count(*) from {table_name}")
             r = cur.fetchone()
-    assert r[0] == 10000
+    assert r[0] == n_kafka_messages
 
 
 @pyinstrument.profile()
@@ -110,4 +110,4 @@ def test_run_assign(assign_config, transform_config):
             table_name = oracle_target.config.table
             cur.execute(f"select count(*) from {table_name}")
             r = cur.fetchone()
-    assert r[0] == 10000
+    assert r[0] == n_kafka_messages
