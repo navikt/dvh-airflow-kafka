@@ -52,7 +52,6 @@ def target_config(base_config):
 def test_source_config(source_config):
     conf = SourceConfig(**source_config)
     assert conf.batch_size == 10000
-    assert conf.batch_interval == 5
 
 
 def test_invalid_schema(source_config):

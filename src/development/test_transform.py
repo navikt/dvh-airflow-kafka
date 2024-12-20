@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, timezone
 
 from ..transform import Transform
 
@@ -27,3 +28,16 @@ def config():
 def test_transform(config):
 
     trans = Transform(config)
+
+
+def test_timestamp():
+    now = datetime.now()
+    now = datetime.timestamp(now)
+    y1 = datetime.utcfromtimestamp(now)
+    y2 = datetime.fromtimestamp(now, timezone.utc)
+    assert y1.year == y2.year
+    assert y1.month == y2.month
+    assert y1.day == y2.day
+    assert y1.minute == y2.minute
+    assert y1.second == y2.second
+    assert y1.microsecond == y2.microsecond

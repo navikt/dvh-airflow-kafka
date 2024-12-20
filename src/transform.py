@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Text, Any, Callable, Union
 
 import dateparser
@@ -69,7 +69,8 @@ def int_s_to_date(x: Optional[Union[int, float]]) -> Optional[datetime]:
     """
     if x is None:
         return None
-    y = datetime.utcfromtimestamp(x)
+    # y = datetime.utcfromtimestamp(x)
+    y = datetime.fromtimestamp(x, timezone.utc)
     return _adjust_timezone(y)
 
 

@@ -52,8 +52,12 @@ class Mapping:
         READ_TO_END = True
         total_messages = 0
         consumer = self.source.get_consumer()
-
-        while READ_TO_END:
+        partitions = {
+            key: False
+            for key in consumer.list_topics().topics[self.source.config.topic].partitions.keys()
+        }
+        # Stop når enden er nådd for alle partisjoner
+        while not all(partitions.values()):
 
             messages = consumer.consume(
                 num_messages=self.source.config.batch_size,
@@ -69,7 +73,9 @@ class Mapping:
                 if err:
                     if err.code() == KafkaError._PARTITION_EOF:
                         logging.info(f"End of log for partition {m.partition()}")
-                    logging.warning(f"Message returned error {err}")
+                        partitions[m.partition()] = True
+                    else:
+                        logging.warning(f"Message returned error {err}")
 
                 else:  # Handle proper message
                     batch.append(self.source.collect_message(msg=m))
