@@ -49,15 +49,16 @@ class Mapping:
                 xcom.write(str(total_messages))
 
     def run_subscribe(self) -> None:
-        READ_TO_END = True
         total_messages = 0
         consumer = self.source.get_consumer()
-        partitions = {
-            key: False
-            for key in consumer.list_topics().topics[self.source.config.topic].partitions.keys()
-        }
+        # TODO
+        # partitions = {
+        #     key: False
+        #     for key in consumer.list_topics().topics[self.source.config.topic].partitions.keys()
+        # }
+
         # Stop når enden er nådd for alle partisjoner
-        while not all(partitions.values()):
+        while True:
 
             messages = consumer.consume(
                 num_messages=self.source.config.batch_size,
@@ -71,11 +72,7 @@ class Mapping:
             for m in messages:
                 err: KafkaError | None = m.error()
                 if err:
-                    if err.code() == KafkaError._PARTITION_EOF:
-                        logging.info(f"End of log for partition {m.partition()}")
-                        partitions[m.partition()] = True
-                    else:
-                        logging.warning(f"Message returned error {err}")
+                    logging.warning(f"Message returned error {err}")
 
                 else:  # Handle proper message
                     batch.append(self.source.collect_message(msg=m))

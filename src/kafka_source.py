@@ -122,7 +122,6 @@ class KafkaSource(Source):
             "enable.auto.commit": False,
             "bootstrap.servers": os.environ["KAFKA_BROKERS"],
             "group.id": self.config.group_id,
-            "enable.partition.eof": True,
         }
 
         if os.environ.get("ENVIRONMENT", "NOT_LOCAL") != "LOCAL":
