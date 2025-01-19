@@ -610,13 +610,13 @@ grpcio-gcp = ["grpcio-gcp (>=0.2.2,<1.0.dev0)"]
 
 [[package]]
 name = "google-api-python-client"
-version = "2.158.0"
+version = "2.159.0"
 description = "Google API Client Library for Python"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google_api_python_client-2.158.0-py2.py3-none-any.whl", hash = "sha256:36f8c8d2e79e50f76790ca5946d2f3f8333e210dc8539a6c88e0742416474ad2"},
-    {file = "google_api_python_client-2.158.0.tar.gz", hash = "sha256:b6664597a9955e04977a62752e33fe44cb35c580e190c1cb08a041893172bd67"},
+    {file = "google_api_python_client-2.159.0-py2.py3-none-any.whl", hash = "sha256:baef0bb631a60a0bd7c0bf12a5499e3a40cd4388484de7ee55c1950bf820a0cf"},
+    {file = "google_api_python_client-2.159.0.tar.gz", hash = "sha256:55197f430f25c907394b44fa078545ffef89d33fd4dca501b7db9f0d8e224bd6"},
 ]
 
 [package.dependencies]
@@ -666,13 +666,13 @@ httplib2 = ">=0.19.0"
 
 [[package]]
 name = "google-cloud-secret-manager"
-version = "2.22.0"
+version = "2.22.1"
 description = "Google Cloud Secret Manager API client library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google_cloud_secret_manager-2.22.0-py2.py3-none-any.whl", hash = "sha256:9e23a8165ed718de56543723b1e21c394f2cee9ababddcac8ceecc9f427d2696"},
-    {file = "google_cloud_secret_manager-2.22.0.tar.gz", hash = "sha256:5dd95ac6243687f86fd803316c0768f507028958b8a2e69b3aa0ace7ac654bf4"},
+    {file = "google_cloud_secret_manager-2.22.1-py2.py3-none-any.whl", hash = "sha256:f18c5094d2d462a58d1ef23cd62895f68ad0adebf96f6b8612f35197a456908c"},
+    {file = "google_cloud_secret_manager-2.22.1.tar.gz", hash = "sha256:f245e505b429990388f0f92cd4a24d424a4c4cdc2acb866e52c24e7680d15e77"},
 ]
 
 [package.dependencies]
@@ -1455,13 +1455,13 @@ dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "pygments
 
 [[package]]
 name = "python-benedict"
-version = "0.34.0"
+version = "0.34.1"
 description = "python-benedict is a dict subclass with keylist/keypath/keyattr support, normalized I/O operations (base64, csv, ini, json, pickle, plist, query-string, toml, xls, xml, yaml) and many utilities... for humans, obviously."
 optional = false
 python-versions = "*"
 files = [
-    {file = "python_benedict-0.34.0-py3-none-any.whl", hash = "sha256:acdcd993ecf56640a3bcd935086e1c19482271950933995511d1fd16a5954ece"},
-    {file = "python_benedict-0.34.0.tar.gz", hash = "sha256:d26a59abf418400dea39785d1336f5958fd7f00a732d5cc4e0e233a94e0b2c70"},
+    {file = "python_benedict-0.34.1-py3-none-any.whl", hash = "sha256:f09711ca2d8e716ca40440f1e26dfa3ccff15e08f1baa88de594fbba799cf87a"},
+    {file = "python_benedict-0.34.1.tar.gz", hash = "sha256:0a81784c826c8983c485bb647ed5e6c8fad139c3921ea1844b21e41da0ff0dc0"},
 ]
 
 [package.dependencies]
@@ -2233,4 +2233,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.13"
-content-hash = "bbe6cae8ffe68f97105bba5047c8f42a994458fdb0b0d323a9f0a87f036a0fe9"
+content-hash = "ee7cf1e8ec948d976eb4ac6171920425407a740536a6233a998dc5543fa6c21f"
