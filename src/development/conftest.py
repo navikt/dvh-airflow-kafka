@@ -34,9 +34,6 @@ def consumer_config(broker):
         "group.id": str(uuid.uuid4()),
         "auto.offset.reset": "earliest",
         "enable.auto.commit": "false",
-        "max.poll.interval.ms": 300000,
-        "session.timeout.ms": 6000,
-        "enable.partition.eof": "true",
     }
 
 

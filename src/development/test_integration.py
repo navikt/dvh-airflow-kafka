@@ -40,7 +40,7 @@ def assign_config(base_config):
 
 
 @pytest.fixture(autouse=True)
-def setup_kafka_for_integration(producer, broker, kafka_admin_client, consumer):
+def setup_kafka_for_integration(producer, broker, kafka_admin_client):
     os.environ["KAFKA_BROKERS"] = broker
     kafka_admin_client.create_topics([NewTopic(TOPIC_NAME, 2)])
     for i in range(n_kafka_messages):
@@ -52,8 +52,6 @@ def setup_kafka_for_integration(producer, broker, kafka_admin_client, consumer):
             timestamp=int(datetime.timestamp(now - timedelta(days=(n_kafka_messages - i - 1)))),
         )
     producer.flush()
-
-    consumer.subscribe([TOPIC_NAME])
 
 
 @pyinstrument.profile()

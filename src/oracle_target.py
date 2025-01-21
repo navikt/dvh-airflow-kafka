@@ -75,6 +75,13 @@ class OracleTarget(Target):
         if not batch:
             return
 
+        k6_conf = self.config.k6_filter
+        if k6_conf:
+            kode67_personer = set(*zip(*self.get_kode67(batch)))
+            for msg in batch:
+                if msg.get(k6_conf.col) in kode67_personer:
+                    msg["kafka_message"] = None
+
         columns = list(batch[0].keys())
         sql = f"insert into {table} ({','.join(columns)}) select :{',:'.join(columns)} from dual where 1=1"
 
