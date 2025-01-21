@@ -1,7 +1,8 @@
 import os
 import logging
+from datetime import datetime, timezone
 
-from confluent_kafka import KafkaError
+from confluent_kafka import KafkaError, TopicPartition
 
 from .kafka_source import KafkaSource
 from .oracle_target import OracleTarget
@@ -32,17 +33,12 @@ class Mapping:
         self.target = target
         self.transform = transform
         self.total_messages = 0
+        self.start_timestamp = int(datetime.now(timezone.utc).timestamp())
 
     def run_assign(self) -> None:
         total_messages = 0
         for batch in self.source.read_polled_batches():
             total_messages += len(batch)
-            k6_conf = self.target.config.k6_filter
-            if k6_conf:
-                kode67_personer = set(*zip(*self.target.get_kode67(batch)))
-                for msg in batch:
-                    if msg.get(k6_conf.col) in kode67_personer:
-                        msg["kafka_message"] = None
             self.target.write_batch(list(map(self.transform, batch)))
         if os.environ["ENVIRONMENT"] != "LOCAL":
             with open("/airflow/xcom/return.json", "w") as xcom:
@@ -51,44 +47,33 @@ class Mapping:
     def run_subscribe(self) -> None:
         total_messages = 0
         consumer = self.source.get_consumer()
-        # TODO
-        # partitions = {
-        #     key: False
-        #     for key in consumer.list_topics().topics[self.source.config.topic].partitions.keys()
-        # }
-
-        # Stop når enden er nådd for alle partisjoner
+        consumer.subscribe([self.source.config.topic])
+        batch = []
         while True:
 
-            messages = consumer.consume(
-                num_messages=self.source.config.batch_size,
+            m = consumer.poll(
                 timeout=self.source.config.poll_timeout,
             )
 
-            if not messages:  # No messages
+            if m == None:  # No messages
                 logging.info("End of kafka log. Exiting")
                 break
-            batch = []
-            for m in messages:
-                err: KafkaError | None = m.error()
-                if err:
-                    logging.warning(f"Message returned error {err}")
 
-                else:  # Handle proper message
-                    batch.append(self.source.collect_message(msg=m))
+            err: KafkaError | None = m.error()
+            if err:
+                logging.warning(f"Message returned error {err}")
+            else:  # Handle proper message
+                batch.append(self.source.collect_message(msg=m))
 
-            total_messages += len(batch)
+            if len(batch) == self.source.config.batch_size:
+                self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
+                logging.info("Committing offset after batch insert")
+                consumer.commit()
+                total_messages += len(batch)
+                batch = []
 
-            k6_conf = self.target.config.k6_filter
-            if k6_conf:
-                kode67_personer = set(*zip(*self.target.get_kode67(batch)))
-                for msg in batch:
-                    if msg.get(k6_conf.col) in kode67_personer:
-                        msg["kafka_message"] = None
-            self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
-            logging.info("Committing offset after batch insert")
-            consumer.commit()
-
+        self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
+        total_messages += len(batch)
         logging.info("Committing offset after last batch insert")
         logging.info(f"{total_messages} messages consumed")
         consumer.commit()
