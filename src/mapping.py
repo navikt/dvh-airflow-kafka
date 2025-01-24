@@ -46,6 +46,7 @@ class Mapping:
 
     def run_subscribe(self) -> None:
         total_messages = 0
+        num_messages_with_error = 0
         consumer = self.source.get_consumer()
         consumer.subscribe([self.source.config.topic])
         batch = []
@@ -61,7 +62,8 @@ class Mapping:
 
             err: KafkaError | None = m.error()
             if err:
-                logging.warning(f"Message returned error {err}")
+                logging.info(f"Message returned error {err}")
+                num_messages_with_error += 1
             else:  # Handle proper message
                 batch.append(self.source.collect_message(msg=m))
 
@@ -76,6 +78,7 @@ class Mapping:
         total_messages += len(batch)
         logging.info("Committing offset after last batch insert")
         logging.info(f"{total_messages} messages consumed")
+        logging.info(f"{num_messages_with_error} messages with error")
         consumer.commit()
         consumer.close()
 
