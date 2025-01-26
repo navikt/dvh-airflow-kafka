@@ -22,7 +22,7 @@ python-benedict = "^0.34.1"
 google-api-python-client = "^2.159.0"
 google-cloud-secret-manager = "^2.22.1"
 confluent-kafka = "^2.8.0"
-pydantic = "^2.10.5"
+pydantic = "^2.10.6"
 
 
 [tool.poetry.dev-dependencies]
@@ -31,9 +31,9 @@ black = "^24.10.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 python-schema-registry-client = "^2.6.0"
-testcontainers = "^4.9.0"
+testcontainers = "^4.9.1"
 sqlalchemy = "^2.0.37"
-pyinstrument = "^5.0.0"
+pyinstrument = "^5.0.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
