@@ -50,6 +50,8 @@ class Mapping:
         consumer = self.source.get_consumer()
         consumer.subscribe([self.source.config.topic])
         batch = []
+        partions_info = {}
+        partions_start_info = {}
         while True:
 
             m = consumer.poll(
@@ -66,6 +68,9 @@ class Mapping:
                 num_messages_with_error += 1
             else:  # Handle proper message
                 batch.append(self.source.collect_message(msg=m))
+                partions_info[m.partition()] = m.offset()
+                if m.partition() not in partions_start_info:
+                    partions_start_info[m.partition()] = m.offset()
 
             if len(batch) == self.source.config.batch_size:
                 self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
@@ -79,6 +84,8 @@ class Mapping:
         logging.info("Committing offset after last batch insert")
         logging.info(f"{total_messages} messages consumed")
         logging.info(f"{num_messages_with_error} messages with error")
+        logging.info(f"{partions_start_info} first offsets processed")
+        logging.info(f"{partions_info} last offsets processed")
         consumer.commit()
         consumer.close()
 
