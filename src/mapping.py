@@ -70,14 +70,23 @@ class Mapping:
             if len(batch) == self.source.config.batch_size:
                 self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
                 resp = consumer.commit(asynchronous=False)
-                logging.info(f"Committed offsets: {resp}")
+
+                logging.info(
+                    f"Committed offsets: {",".join([f"Partition {tp.partition} offset {tp.offset} " for tp in resp])}"
+                )
+
+                logging.info(f"Commit response: {resp}")
+
                 total_messages += len(batch)
                 batch = []
         if batch:
             self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
             total_messages += len(batch)
             resp = consumer.commit(asynchronous=False)
-            logging.info(f"Committed offsets: {resp}")
+            logging.info(
+                f"Committed offsets: {",".join([f"Partition {tp.partition} offset {tp.offset}" for tp in resp])}"
+            )
+            logging.info(f"Commit response: {resp}")
         logging.info(f"{total_messages} messages consumed")
         logging.info(f"{num_messages_with_error} messages with error")
         consumer.close()
