@@ -18,11 +18,19 @@ oracle = OracleDbContainer()
 os.environ["ENVIRONMENT"] = "LOCAL"
 
 
-@pytest.fixture(scope="session")
-def broker():
+@pytest.fixture(scope="session", autouse=True)
+def start_broker(request):
     # Start Kafka container
     kafka.start()
-    # Get the Kafka broker URL
+
+    def remove_container():
+        kafka.stop()
+
+    request.addfinalizer(remove_container)
+
+
+@pytest.fixture(scope="session")
+def broker():
     broker = kafka.get_bootstrap_server()
     return broker
 
@@ -103,8 +111,14 @@ def transform_config():
 
 
 @pytest.fixture(autouse=True, scope="session")
-def setup_oracle(table_name, transform_config):
+def setup_oracle(request, table_name, transform_config):
     oracle.start()
+
+    def remove_container():
+        oracle.stop()
+
+    request.addfinalizer(remove_container)
+
     url = oracle.get_connection_url()
     dsn = url.split("@")[1]
     password = url.split("@")[0].split(":")[-1]

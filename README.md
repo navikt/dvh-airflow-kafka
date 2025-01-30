@@ -6,7 +6,11 @@ Følg denne [guiden](kafka-topic.md) for å opprette en NAIS applikasjon som har
 
 ## Lokal utvikling - kjøre tester
 
-Krever at [Docker-desktop](https://www.docker.com/products/docker-desktop/) og [Poetry](https://python-poetry.org/docs/) er installert.
+Krever at [Docker desktop](https://www.docker.com/products/docker-desktop/) (Krever lisen) og [Poetry](https://python-poetry.org/docs/) er installert. \
+[Podman](https://podman-desktop.io/tutorial/testcontainers-with-podman) er et godt alternativ til Docker Desktop.
+- [Podman desktop](https://podman-desktop.io/docs/migrating-from-docker/managing-docker-compatibility)
+- [env-vars-fix](https://stackoverflow.com/questions/67642620/docker-credential-desktop-not-installed-or-not-available-in-path)
+
 
 ```bash
 poetry run test
