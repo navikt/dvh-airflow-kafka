@@ -10,17 +10,17 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
-kafka-python = "^2.0.2"
+kafka-python = "^2.0.3"
 avro = "^1.12.0"
-dateparser = "^1.2.0"
+dateparser = "^1.2.1"
 dataverk-vault = "^0.1.10"
 PyYAML = "^6.0"
 requests = "^2.32.3"
 python-dotenv = "^1.0.1"
 oracledb = "^2.5.1"
 python-benedict = "^0.34.1"
-google-api-python-client = "^2.160.0"
-google-cloud-secret-manager = "^2.22.1"
+google-api-python-client = "^2.161.0"
+google-cloud-secret-manager = "^2.23.0"
 confluent-kafka = "^2.8.0"
 pydantic = "^2.10.6"
 
@@ -32,7 +32,7 @@ black = "^25.1.0"
 pytest = "^8.3.4"
 python-schema-registry-client = "^2.6.0"
 testcontainers = "^4.9.1"
-sqlalchemy = "^2.0.37"
+sqlalchemy = "^2.0.38"
 pyinstrument = "^5.0.1"
 
 [build-system]
