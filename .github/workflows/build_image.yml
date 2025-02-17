@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - image**
+      - feat**
     paths-ignore:
       - '**.md'
   workflow_dispatch:
