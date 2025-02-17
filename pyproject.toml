@@ -35,7 +35,7 @@ pyinstrument = "^5.0.1"
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[project.scripts]
+[tool.poetry.scripts]
 test = "scripts:test"
 
 # Pytest config
