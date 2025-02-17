@@ -4,7 +4,7 @@ version = "0.0.1"
 description = ""
 authors = [{name = "NAV DVH"}]
 license = "MIT"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<4.0"
 
 dependencies = [
     "avro>=1.12.0",
@@ -23,7 +23,7 @@ dependencies = [
 [tool.poetry]
 package-mode = false
 
-[group.dev.dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 black = "^25.1.0"
 python-schema-registry-client = "^2.6.0"
