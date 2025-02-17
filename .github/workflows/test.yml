@@ -4,7 +4,7 @@ on: [push, workflow_dispatch]
 
 env:
   PYTHON_VERSION: 3.12
-  POETRY_VERSION: 1.5.1
+  POETRY_VERSION: 2.1.1
   
 jobs:
   unit-tests:
