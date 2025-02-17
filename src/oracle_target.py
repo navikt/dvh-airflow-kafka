@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Text, Any, List, Tuple
+from typing import Dict, Text, Any, List, Tuple, Callable
 import logging
 import pytz
 
@@ -64,13 +64,13 @@ class OracleTarget(Target):
                 AND TRUNC(:timestamp) BETWEEN gyldig_fra_dato AND gyldig_til_dato
                 AND skjermet_kode IN(6,7)
             """
-
+            breakpoint()
             with self._oracle_connection() as con:
                 with con.cursor() as cur:
                     return cur.execute(sql, bind_values).fetchall()
         return []
 
-    def write_batch(self, batch: List[Dict[Text, Any]]) -> None:
+    def write_batch(self, batch: List[Dict[Text, Any]], transform: Callable) -> None:
         table = self.config.table
         if not batch:
             return
@@ -82,6 +82,7 @@ class OracleTarget(Target):
                 if msg.get(k6_conf.col) in kode67_personer:
                     msg["kafka_message"] = None
 
+        batch = list(map(transform, batch))
         columns = list(batch[0].keys())
         sql = f"insert into {table} ({','.join(columns)}) select :{',:'.join(columns)} from dual where 1=1"
 

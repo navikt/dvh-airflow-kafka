@@ -39,13 +39,7 @@ class Mapping:
         total_messages = 0
         for batch in self.source.read_polled_batches():
             total_messages += len(batch)
-            k6_conf = self.target.config.k6_filter
-            if k6_conf:
-                kode67_personer = set(*zip(*self.target.get_kode67(batch)))
-                for msg in batch:
-                    if msg.get(k6_conf.col) in kode67_personer:
-                        msg["kafka_message"] = None
-            self.target.write_batch(list(map(self.transform, batch)))
+            self.target.write_batch(batch, self.transform)
         if os.environ["ENVIRONMENT"] != "LOCAL":
             with open("/airflow/xcom/return.json", "w") as xcom:
                 xcom.write(str(total_messages))
@@ -74,7 +68,7 @@ class Mapping:
                 batch.append(self.source.collect_message(msg=m))
 
             if len(batch) == self.source.config.batch_size:
-                self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
+                self.target.write_batch(batch, self.transform)  # Write batch to Oracle
                 resp = consumer.commit(asynchronous=False)
 
                 logging.info(
@@ -86,7 +80,7 @@ class Mapping:
                 total_messages += len(batch)
                 batch = []
         if batch:
-            self.target.write_batch(list(map(self.transform, batch)))  # Write batch to Oracle
+            self.target.write_batch(batch, self.transform)  # Write batch to Oracle
             total_messages += len(batch)
             resp = consumer.commit(asynchronous=False)
             logging.info(
