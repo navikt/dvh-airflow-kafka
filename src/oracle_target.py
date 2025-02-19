@@ -52,7 +52,9 @@ class OracleTarget(Target):
             # generating sequential sql bind variable names for the range of personidenter i batchen
             # example :1,:2,:3 etc
             sequential_bind_variable_names = [":" + str(i + 1) for i in range(len(person_identer))]
-            in_bind_names = ",".join(sequential_bind_variable_names)
+            # Hack to allow IN lists up to 99999 values
+            # https://stackoverflow.com/questions/4722220/sql-in-clause-1000-item-limit
+            in_bind_names = ",".join([f"(1,{i})" for i in sequential_bind_variable_names])
 
             bind_values = dict(zip(sequential_bind_variable_names, person_identer))
             bind_values.update({"timestamp": timestamp})
@@ -60,11 +62,10 @@ class OracleTarget(Target):
             sql = f"""
                 SELECT {k6_conf.filter_col}
                 FROM {k6_conf.filter_table}
-                WHERE {k6_conf.filter_col} IN ({in_bind_names})
+                WHERE (1,{k6_conf.filter_col}) IN ({in_bind_names})
                 AND TRUNC(:timestamp) BETWEEN gyldig_fra_dato AND gyldig_til_dato
                 AND skjermet_kode IN(6,7)
             """
-            breakpoint()
             with self._oracle_connection() as con:
                 with con.cursor() as cur:
                     return cur.execute(sql, bind_values).fetchall()
