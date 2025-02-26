@@ -77,6 +77,7 @@ class SourceConfig(BaseModel):
     key_decoder: KeyDecoder = Field("utf-8", alias="key-decoder")
     keypath_separator: Optional[str] = Field(None, alias="keypath-seperator")
     message_fields_filter: Optional[list] = Field(None, alias="message-fields-filter")
+    flag_field_config: Optional[list] = Field(None, alias="flag-field-config")
     poll_timeout: int = Field(
         10,
         alias="poll-timeout",
