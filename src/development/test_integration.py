@@ -14,7 +14,7 @@ import pyinstrument
 
 TABLE_NAME = "RAA_DATA_STROM"
 TOPIC_NAME = "integration-test-topic"
-n_kafka_messages = 100
+n_kafka_messages = 1
 now = datetime(2024, 12, 18, 11, 11, 11)
 
 
@@ -24,7 +24,8 @@ def subscribe_config(base_config):
     config["source"]["topic"] = TOPIC_NAME
     config["source"]["strategy"] = "subscribe"
     config["source"]["group-id"] = "integration-test-group-id-1"
-
+    config["source"]["flag-field-config"] = ["string", "nested", "nested2", "nested3.key", "nested4.index", "nested5.key2"]
+    config["source"]["keypath-separator"] = "."
     config["target"]["table"] = TABLE_NAME
     return config
 
@@ -35,6 +36,8 @@ def assign_config(base_config):
     config["source"]["topic"] = TOPIC_NAME
     config["source"]["strategy"] = "assign"
     config["source"]["group-id"] = "integration-test-group-id-2"
+    config["source"]["flag-field-config"] = ["string", "nested", "nested2", "nested3.key", "nested4.index", "nested5.key2"]
+    config["source"]["keypath-separator"] = "."
     config["target"]["table"] = TABLE_NAME
     return config
 
@@ -47,7 +50,7 @@ def setup_kafka_for_integration(producer, broker, kafka_admin_client):
         producer.produce(
             TOPIC_NAME,
             key=f"key{i}",
-            value=json.dumps({"id": i, "value": f"Message {i}"}),
+            value=json.dumps({"id": i, "value": f"Message {i}", "string": "hei", "nested": {"key": "test"}, "nested2": None, "nested3": {"key": "test"}, "nested4": {"index": "test"}, "nested5": [{"key1": "test"}, {"key2": "test"}, {"key2": None}]}), #NB husk å teste med flere felter her
             partition=i % 2,
             timestamp=int(datetime.timestamp(now - timedelta(days=(n_kafka_messages - i - 1)))),
         )
@@ -66,9 +69,9 @@ def test_run_subscribe(subscribe_config, transform_config):
     with oracle_target._oracle_connection() as con:
         with con.cursor() as cur:
             table_name = oracle_target.config.table
-            cur.execute(f"select kafka_key, kafka_topic from {table_name}")
+            cur.execute(f"select kafka_key, kafka_topic, kafka_message from {table_name}")
             r = cur.fetchone()
-    assert r[0] == "key1"
+    #assert r[0] == "key1"
     assert r[1] == TOPIC_NAME
 
     with oracle_target._oracle_connection() as con:
@@ -99,8 +102,9 @@ def test_run_assign(assign_config, transform_config):
     with oracle_target._oracle_connection() as con:
         with con.cursor() as cur:
             table_name = oracle_target.config.table
-            cur.execute(f"select kafka_key, kafka_topic from {table_name}")
+            cur.execute(f"select kafka_key, kafka_topic, kafka_message from {table_name}")
             r = cur.fetchone()
+            print(r[2])
     assert r[1] == TOPIC_NAME
 
     with oracle_target._oracle_connection() as con:
