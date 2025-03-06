@@ -5,6 +5,7 @@ import os
 import struct
 from typing import Generator, Dict, Text, Any, Tuple, List, Optional
 import logging
+import re
 
 import requests
 import avro.schema
@@ -66,42 +67,15 @@ class KafkaSource(Source):
         filter_config = self.config.message_fields_filter
         if filter_config is not None:
             dictionary.remove(filter_config)
-        
+
         flag_field_config = self.config.flag_field_config
         if flag_field_config is not None:
             keypaths = dictionary.keypaths(indexes=True, sort=False)
-            
-            for key in keypaths:    
-                value = dictionary.get(key)
 
-                if isinstance(value, list):
-                    for item in value:
-                        if isinstance(item, dict):
-                            for sub_key, sub_value in item.items():
-                                full_key = f"{key}.{sub_key}"
-                                if full_key in flag_field_config:
-                                    print(f"Key in list: {full_key}, Value: {sub_value}")
-                                    if sub_value is not None:
-                                        item[sub_key] = 1 
-                                    else:
-                                        item[sub_key] = 0
-                
-                if isinstance(value, dict):
-                    for sub_key, sub_value in value.items():
-                        full_key = f"{key}.{sub_key}"
-                        if full_key in flag_field_config:
-                            print(f"Key in dict: {full_key}, Value: {sub_value}")
-                            if sub_value is not None:
-                                dictionary[key][sub_key] = 1 
-                            else:
-                                dictionary[key][sub_key] = 0
-
-                if key in flag_field_config and "." not in key:
-                    print(f"Key er {key} og Value er {value}")
-                    if value is not None:
-                        dictionary[key] = 1
-                    else:
-                        dictionary[key] = 0
+            for key in keypaths:
+                cleaned_key = re.sub(r"\[\d+\]", "", key)
+                if cleaned_key in flag_field_config:
+                    dictionary[key] = 1 if dictionary[key] != None else 0
 
         kafka_hash = hashlib.sha256(message_value).hexdigest()
         kafka_message = json.dumps(dictionary, ensure_ascii=False)
@@ -127,58 +101,29 @@ class KafkaSource(Source):
         reader = io.BytesIO(msg[5:])
         decoder = avro.io.BinaryDecoder(reader)
         value = self.schema_cache[schema_id].read(decoder)
-        value = benedict(value)
+        dictionary = benedict(value)
 
         separator = self.config.keypath_separator
         if separator is not None:
-            value.keypath_separator = separator
+            dictionary.keypath_separator = separator
 
         filter_config = self.config.message_fields_filter
         if filter_config is not None:
-            value.remove(filter_config)
+            dictionary.remove(filter_config)
 
         flag_field_config = self.config.flag_field_config
         if flag_field_config is not None:
-            keypaths = value.keypaths(indexes=True, sort=False)
-            
-            for key in keypaths:    
-                dict_value = value.get(key) # Find another name for this variable (value is already used)
+            keypaths = dictionary.keypaths(indexes=True, sort=False)
 
-                if isinstance(dict_value, list):
-                    for item in dict_value:
-                        if isinstance(item, dict):
-                            for sub_key, sub_value in item.items():
-                                full_key = f"{key}.{sub_key}"
-                                if full_key in flag_field_config:
-                                    print(f"Key in list: {full_key}, Value: {sub_value}")
-                                    if sub_value is not None:
-                                        item[sub_key] = 1 
-                                    else:
-                                        item[sub_key] = 0
-                
-                if isinstance(dict_value, dict):
-                    for sub_key, sub_value in dict_value.items():
-                        full_key = f"{key}.{sub_key}"
-                        if full_key in flag_field_config:
-                            print(f"Key in dict: {full_key}, Value: {sub_value}")
-                            if sub_value is not None:
-                                value[key][sub_key] = 1 
-                            else:
-                                value[key][sub_key] = 0
+            for key in keypaths:
+                cleaned_key = re.sub(r"\[\d+\]", "", key)
+                if cleaned_key in flag_field_config:
+                    dictionary[key] = 1 if dictionary[key] != None else 0
 
-                if key in flag_field_config and "." not in key:
-                    print(f"Key er {key} og Value er {dict_value}")
-                    if value is not None:
-                        value[key] = 1
-                    else:
-                        value[key] = 0
-        """END NEW FUNCTIONALITY"""
-
-
-        value["kafka_message"] = json.dumps(value, default=str, ensure_ascii=False)
-        value["kafka_schema_id"] = schema_id
-        value["kafka_hash"] = hashlib.sha256(msg[5:]).hexdigest()
-        return value
+        dictionary["kafka_message"] = json.dumps(dictionary, default=str, ensure_ascii=False)
+        dictionary["kafka_schema_id"] = schema_id
+        dictionary["kafka_hash"] = hashlib.sha256(msg[5:]).hexdigest()
+        return dictionary
 
     def _load_avro_schema(self, schema_id: int) -> avro.io.DatumReader:
         schema_registry = os.environ["KAFKA_SCHEMA_REGISTRY"]
