@@ -34,7 +34,7 @@ jobs:
           FULL_SHA: "${{github.sha}}"
           REF: "${{github.ref}}"
         run: |
-          TAG=$(git log -1 --pretty=%ad --date=format:%Y-%m-%d)-$(git log --pretty=format:'%h' -n 1)
+          TAG=$(git log -1 --pretty=%ad --date=format:%Y%m%d-%H%M%S)
           branch=$(echo $REF | cut -c12-)
           if [ $branch = main ]
           then
