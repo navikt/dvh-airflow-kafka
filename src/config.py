@@ -87,10 +87,6 @@ class SourceConfig(BaseModel):
         KafkaConsumerStrategy.ASSIGN,
         description="subscribe -> use offsets from consumer group, assign -> get offsets based om provided timestamps",
     )
-    # stop_after_catchup: bool = Field(
-    #     False,
-    #     description="Terminate job when a message has a timestamp larger than starttime of job",
-    # )
 
 
 class K6Filter(BaseModel):

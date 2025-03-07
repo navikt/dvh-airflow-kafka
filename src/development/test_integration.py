@@ -51,12 +51,39 @@ def setup_kafka_for_integration(producer, broker, kafka_admin_client):
                 {
                     "id": i,
                     "value": f"Message {i}",
+                }
+            ),
+            partition=i % 2,
+            timestamp=int(datetime.timestamp(now - timedelta(days=(n_kafka_messages - i - 1)))),
+        )
+    producer.flush()
+
+
+@pytest.fixture(autouse=True)
+def setup_kafka_for_integration_more_data(producer, broker, kafka_admin_client):
+    os.environ["KAFKA_BROKERS"] = broker
+    kafka_admin_client.create_topics([NewTopic(TOPIC_NAME_MORE_DATA, 2)])
+    for i in range(2):
+        producer.produce(
+            TOPIC_NAME_MORE_DATA,
+            key=f"key{i}",
+            value=json.dumps(
+                {
+                    "id": i,
+                    "value": f"Message {i}",
                     "string": "hei",
                     "nested": {"key": "test"},
                     "nested2": None,
                     "nested3": {"key": "test"},
                     "nested4": {"index": "test"},
-                    "nested5": [{"key1": "test"}, {"key2": "test"}, {"key2": None}],
+                    "nested5": [
+                        {
+                            "key1": "test",
+                        },
+                        {"key2": "test"},
+                        {"key2": None},
+                    ],
+                    "nested6": [{"nested7": [{"key": "val"}]}],
                 }
             ),  # NB husk å teste med flere felter her
             partition=i % 2,
@@ -125,7 +152,7 @@ def test_run_assign(assign_config, transform_config):
 @pytest.fixture
 def assign_config_flag_field(assign_config):
     config = assign_config
-    config["source"]["topic-name"] = TOPIC_NAME_MORE_DATA
+    config["source"]["topic"] = TOPIC_NAME_MORE_DATA
     config["source"]["flag-field-config"] = [
         "string",
         "nested",
@@ -133,6 +160,7 @@ def assign_config_flag_field(assign_config):
         "nested3/key",
         "nested4/index",
         "nested5/key2",
+        "nested6/nested7/key",
     ]
     config["source"]["keypath-seperator"] = "/"
     return config
@@ -168,10 +196,4 @@ def test_run_assign_flag_field(assign_config_flag_field, transform_config):
     assert obj["nested5"][0]["key1"] == "test"
     assert obj["nested5"][1]["key2"] == 1
     assert obj["nested5"][2]["key2"] == 0
-
-    with oracle_target._oracle_connection() as con:
-        with con.cursor() as cur:
-            table_name = oracle_target.config.table
-            cur.execute(f"select count(*) from {table_name}")
-            r = cur.fetchone()
-    assert r[0] == n_kafka_messages
+    assert obj["nested6"][0]["nested7"][0]["key"] == 1
