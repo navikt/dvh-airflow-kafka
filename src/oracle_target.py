@@ -42,20 +42,21 @@ class OracleTarget(Target):
         utc_timestamp_ms = str(int(utc_dt.timestamp() * 1000))
         return utc_timestamp_ms
 
+    # Handles nested columns for person identifier, e.g. 'person.id'
+    def get_person_identifier(self, msg: Dict[Text, Any], column: Text) -> Any:
+                for col in column.split(self.config.k6_filter.col_keypath_separator):
+                    msg = msg.get(col)
+                    if msg is None:
+                        return None
+                return msg
+
     def get_kode67(self, batch: List[Dict[Text, Any]]) -> List[Tuple]:
         k6_conf = self.config.k6_filter
         if k6_conf is not None:
             timestamp_col = k6_conf.timestamp
             timestamp = int_ms_to_date(batch[-1][timestamp_col])
 
-            def get_person_identifier(msg: Dict[Text, Any], column: Text) -> Any:
-                for col in column.split('.'):
-                    msg = msg.get(col)
-                    if msg is None:
-                        return None
-                return msg
-
-            person_identer = [get_person_identifier(msg, k6_conf.col) for msg in batch]
+            person_identer = [self.get_person_identifier(msg, k6_conf.col) for msg in batch]
 
             # generating sequential sql bind variable names for the range of personidenter i batchen
             # example :1,:2,:3 etc
@@ -83,19 +84,12 @@ class OracleTarget(Target):
         table = self.config.table
         if not batch:
             return
-        
-        def get_person_identifier(msg: Dict[Text, Any], column: Text) -> Any:
-                for col in column.split('.'):
-                    msg = msg.get(col)
-                    if msg is None:
-                        return None
-                return msg
 
         k6_conf = self.config.k6_filter
         if k6_conf:
             kode67_personer = set(*zip(*self.get_kode67(batch)))
             for msg in batch:
-                if get_person_identifier(msg, k6_conf.col) in kode67_personer:
+                if self.get_person_identifier(msg, k6_conf.col) in kode67_personer:
                     msg["kafka_message"] = None
 
         batch = list(map(transform, batch))
