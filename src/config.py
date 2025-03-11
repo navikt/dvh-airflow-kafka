@@ -77,6 +77,7 @@ class SourceConfig(BaseModel):
     key_decoder: KeyDecoder = Field("utf-8", alias="key-decoder")
     keypath_separator: Optional[str] = Field(None, alias="keypath-seperator")
     message_fields_filter: Optional[list] = Field(None, alias="message-fields-filter")
+    flag_field_config: Optional[list] = Field(None, alias="flag-field-config")
     poll_timeout: int = Field(
         10,
         alias="poll-timeout",
@@ -86,15 +87,12 @@ class SourceConfig(BaseModel):
         KafkaConsumerStrategy.ASSIGN,
         description="subscribe -> use offsets from consumer group, assign -> get offsets based om provided timestamps",
     )
-    # stop_after_catchup: bool = Field(
-    #     False,
-    #     description="Terminate job when a message has a timestamp larger than starttime of job",
-    # )
 
 
 class K6Filter(BaseModel):
     filter_table: str = Field(alias="filter-table")
     filter_col: str = Field(alias="filter-col")
+    col_keypath_separator: str = Field(".", alias="col-keypath-separator")
     col: str
     timestamp: str
 

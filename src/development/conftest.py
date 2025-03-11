@@ -157,7 +157,7 @@ def table_insert(table_name, data):
         con.commit()
 
 
-@pytest.fixture(autouse=True, scope="module")
+@pytest.fixture(autouse=True, scope="function")
 def setup_oracle_fixtures(table_name, transform_config):
 
     columns = [f"{obj["dst"]} {obj["datatype"]}" for obj in transform_config]
