@@ -92,6 +92,7 @@ class SourceConfig(BaseModel):
 class K6Filter(BaseModel):
     filter_table: str = Field(alias="filter-table")
     filter_col: str = Field(alias="filter-col")
+    col_keypath_separator: str = Field(".", alias="col-keypath-separator")
     col: str
     timestamp: str
 
