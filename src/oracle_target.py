@@ -47,7 +47,15 @@ class OracleTarget(Target):
         if k6_conf is not None:
             timestamp_col = k6_conf.timestamp
             timestamp = int_ms_to_date(batch[-1][timestamp_col])
-            person_identer = [msg.get(k6_conf.col) for msg in batch]
+
+            def get_person_identifier(msg: Dict[Text, Any], column: Text) -> Any:
+                for col in column.split('.'):
+                    msg = msg.get(col)
+                    if msg is None:
+                        return None
+                return msg
+
+            person_identer = [get_person_identifier(msg, k6_conf.col) for msg in batch]
 
             # generating sequential sql bind variable names for the range of personidenter i batchen
             # example :1,:2,:3 etc
@@ -75,12 +83,19 @@ class OracleTarget(Target):
         table = self.config.table
         if not batch:
             return
+        
+        def get_person_identifier(msg: Dict[Text, Any], column: Text) -> Any:
+                for col in column.split('.'):
+                    msg = msg.get(col)
+                    if msg is None:
+                        return None
+                return msg
 
         k6_conf = self.config.k6_filter
         if k6_conf:
             kode67_personer = set(*zip(*self.get_kode67(batch)))
             for msg in batch:
-                if msg.get(k6_conf.col) in kode67_personer:
+                if get_person_identifier(msg, k6_conf.col) in kode67_personer:
                     msg["kafka_message"] = None
 
         batch = list(map(transform, batch))
