@@ -28,7 +28,7 @@ pytest = "^8.3.5"
 black = "^25.1.0"
 python-schema-registry-client = "^2.6.0"
 testcontainers = "^4.9.2"
-sqlalchemy = "^2.0.37"
+sqlalchemy = "^2.0.39"
 pyinstrument = "^5.0.1"
 
 [build-system]
