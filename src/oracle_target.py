@@ -83,6 +83,7 @@ class OracleTarget(Target):
                 if msg.get(k6_conf.col) in kode67_personer:
                     msg["kafka_message"] = None
 
+        transform.set_batch_time()
         batch = list(map(transform, batch))
         columns = list(batch[0].keys())
         sql = f"insert into {table} ({','.join(columns)}) select :{',:'.join(columns)} from dual where 1=1"

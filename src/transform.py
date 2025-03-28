@@ -131,6 +131,8 @@ class Transform:
         cast (dict)
     """
 
+    batch_time = None
+
     class Rule:
         """
         Internal class for transform lookups
@@ -147,6 +149,10 @@ class Transform:
 
     def __init__(self, transforms: List[Dict[Text, Any]]) -> None:
         self.rules: List[Transform.Rule] = [Transform.Rule(transform) for transform in transforms]
+        self.set_batch_time()
+
+    def set_batch_time(self):
+        self.batch_time = datetime.today()
 
     def __call__(self, message: Dict[Text, Any]) -> Dict[Text, Any]:
         """Returns transformed message
@@ -158,12 +164,11 @@ class Transform:
         """
 
         transformed_message = dict()
-        batch_time = datetime.today()
         ## TODO lokalt er det $$BATCH_TIME, i airflow brukes $$$BATCH_TIME
         for rule in self.rules:
             if rule.src[:2] == "$$":
                 if rule.src[2:] == "BATCH_TIME":
-                    item = batch_time
+                    item = self.batch_time
                 else:
                     raise NotImplementedError("unsupported identifier")
             elif rule.src[:1] == "$":

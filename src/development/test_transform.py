@@ -41,3 +41,26 @@ def test_timestamp():
     assert y1.minute == y2.minute
     assert y1.second == y2.second
     assert y1.microsecond == y2.microsecond
+
+
+def test_all_messages_after_transfrom_have_same_batch_time(config):
+
+    trans = Transform(config)
+
+    messages = [
+        {
+            "kafka_key": "key",
+            "kafka_offset": i,
+            "kafka_partition": 0,
+            "kafka_timestamp": 123456789,
+            "kafka_topic": "topic",
+            "kafka_hash": "hash",
+            "kafka_message": "message",
+            "$TESTERSEN": "tester",
+            "$$BATCH_TIME": "batch_time",
+        }
+        for i in range(10)
+    ]
+
+    batch = list(map(trans, messages))
+    assert len(set([val["lastet_tid"] for val in batch])) == 1
