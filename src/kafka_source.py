@@ -66,7 +66,12 @@ class KafkaSource(Source):
 
         filter_config = self.config.message_fields_filter
         if filter_config is not None:
-            dictionary.remove(filter_config)
+            keypaths = dictionary.keypaths(indexes=True, sort=False)
+
+            for key in keypaths:
+                cleaned_key = re.sub(r"\[\d+\]", "", key)
+                if cleaned_key in flag_field_config:
+                    dictionary.remove(key)
 
         flag_field_config = self.config.flag_field_config
         if flag_field_config is not None:
@@ -109,7 +114,12 @@ class KafkaSource(Source):
 
         filter_config = self.config.message_fields_filter
         if filter_config is not None:
-            dictionary.remove(filter_config)
+            keypaths = dictionary.keypaths(indexes=True, sort=False)
+
+            for key in keypaths:
+                cleaned_key = re.sub(r"\[\d+\]", "", key)
+                if cleaned_key in filter_config:
+                    dictionary.remove(key)
 
         flag_field_config = self.config.flag_field_config
         if flag_field_config is not None:
