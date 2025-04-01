@@ -70,7 +70,7 @@ class KafkaSource(Source):
 
             for key in keypaths:
                 cleaned_key = re.sub(r"\[\d+\]", "", key)
-                if cleaned_key in flag_field_config:
+                if cleaned_key in filter_config:
                     dictionary.remove(key)
 
         flag_field_config = self.config.flag_field_config
