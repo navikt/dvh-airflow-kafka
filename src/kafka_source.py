@@ -5,6 +5,7 @@ import os
 import struct
 from typing import Generator, Dict, Text, Any, Tuple, List, Optional
 import logging
+import re
 
 import requests
 import avro.schema
@@ -65,7 +66,21 @@ class KafkaSource(Source):
 
         filter_config = self.config.message_fields_filter
         if filter_config is not None:
-            dictionary.remove(filter_config)
+            keypaths = dictionary.keypaths(indexes=True, sort=False)
+
+            for key in keypaths:
+                cleaned_key = re.sub(r"\[\d+\]", "", key)
+                if cleaned_key in filter_config:
+                    dictionary.remove(key)
+
+        flag_field_config = self.config.flag_field_config
+        if flag_field_config is not None:
+            keypaths = dictionary.keypaths(indexes=True, sort=False)
+
+            for key in keypaths:
+                cleaned_key = re.sub(r"\[\d+\]", "", key)
+                if cleaned_key in flag_field_config:
+                    dictionary[key] = 1 if dictionary[key] != None else 0
 
         kafka_hash = hashlib.sha256(message_value).hexdigest()
         kafka_message = json.dumps(dictionary, ensure_ascii=False)
@@ -91,20 +106,34 @@ class KafkaSource(Source):
         reader = io.BytesIO(msg[5:])
         decoder = avro.io.BinaryDecoder(reader)
         value = self.schema_cache[schema_id].read(decoder)
-        value = benedict(value)
+        dictionary = benedict(value)
 
         separator = self.config.keypath_separator
         if separator is not None:
-            value.keypath_separator = separator
+            dictionary.keypath_separator = separator
 
         filter_config = self.config.message_fields_filter
         if filter_config is not None:
-            value.remove(filter_config)
+            keypaths = dictionary.keypaths(indexes=True, sort=False)
 
-        value["kafka_message"] = json.dumps(value, default=str, ensure_ascii=False)
-        value["kafka_schema_id"] = schema_id
-        value["kafka_hash"] = hashlib.sha256(msg[5:]).hexdigest()
-        return value
+            for key in keypaths:
+                cleaned_key = re.sub(r"\[\d+\]", "", key)
+                if cleaned_key in filter_config:
+                    dictionary.remove(key)
+
+        flag_field_config = self.config.flag_field_config
+        if flag_field_config is not None:
+            keypaths = dictionary.keypaths(indexes=True, sort=False)
+
+            for key in keypaths:
+                cleaned_key = re.sub(r"\[\d+\]", "", key)
+                if cleaned_key in flag_field_config:
+                    dictionary[key] = 1 if dictionary[key] != None else 0
+
+        dictionary["kafka_message"] = json.dumps(dictionary, default=str, ensure_ascii=False)
+        dictionary["kafka_schema_id"] = schema_id
+        dictionary["kafka_hash"] = hashlib.sha256(msg[5:]).hexdigest()
+        return dictionary
 
     def _load_avro_schema(self, schema_id: int) -> avro.io.DatumReader:
         schema_registry = os.environ["KAFKA_SCHEMA_REGISTRY"]
@@ -182,7 +211,7 @@ class KafkaSource(Source):
             else:
                 logging.info(
                     f"Partition {tp.partition} "
-                    f"is configured to start at offset: {tp.offset}"
+                    f"is configured to start at offset: {tp.offset} "
                     f"for topic: {tp.topic}"
                 )
                 tp_to_assign_start[tp.partition] = tp
