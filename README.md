@@ -76,6 +76,15 @@ source:
   # assign: konsumenten bruker DATA_INTERVAL_START/DATA_INTERVAL_END
   # subscribe: konsumenten comitter offset etter hver batch og fortsetter fra offset som er lagret på topic
   strategy: assign | subscribe # default assign
+    # Fjerner feltene key1 og key3 fra json-objektet før det sendes til oracle. Støtter nøstede felter og felter i lister.
+  keypath-seperator: /
+  message-fields-filter:
+    - key1
+    - key2/key3
+  # Flagger felter med innhold (1 hvis innhold, 0 om ikke) før det sendes til oracle. Støtter nøstede felter og felter i lister.
+  flag-field-config:
+    - key1
+    - key2/key3
 # Mål
 target:
   # Kun Oracle er støttet for øyeblikket
@@ -101,11 +110,15 @@ target:
     - kafka_partition
     - kafka_offset
     - kafka_topic
-  # Fjerner feltene key1 og key3 fra json-objektet før det sendes til oracle
-  keypath-seperator: /
-  message-fields-filter:
-    - key1
-    - key2/key3
+  # Hvis du ønsker å fjerne meldinger med kode 6/7-skjermede personer. Kafka message settes til null. Støtter nøstede felt.
+  k6-filter:
+    # Tabell oppslag med fødselsnummer skal gjøres mot, samt kolonne
+    filter-table: dt_person.ident_off_id_til_fk_person1
+    filter-col: off_id
+    timestamp: kafka_timestamp
+    col-keypath-separator: /
+    # Felt i kafka-meldingen med fødselsnummer
+    col: fnr | key1/fnr
 # Mapping mellom kildekolonne og målkolonne
 transform:
   - src: kafka_key
