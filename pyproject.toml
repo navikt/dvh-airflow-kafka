@@ -26,8 +26,8 @@ package-mode = false
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
 black = "^25.1.0"
-python-schema-registry-client = "^2.6.0"
-testcontainers = "^4.9.2"
+python-schema-registry-client = "^2.6.1"
+testcontainers = "^4.10.0"
 sqlalchemy = "^2.0.40"
 pyinstrument = "^5.0.1"
 
