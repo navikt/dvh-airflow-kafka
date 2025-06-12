@@ -85,6 +85,15 @@ source:
   flag-field-config:
     - key1
     - key2/key3
+  # OBS: Behold KUN de meldingene som matcher regelene nedenfor. Liste med key/value-pairs
+  # Alle meldinger som ikke matcher vil bli satt til NONE
+  message-filter:
+  - key: <feltnavn-kafka-message>
+    allowed_value: <verdinavn du vil beholde>
+  - key: <nytt eller samme feltnavn-kafka-message>
+    allowed_value: <verdinavn du vil beholde>
+    ...
+    
 # Mål
 target:
   # Kun Oracle er støttet for øyeblikket
