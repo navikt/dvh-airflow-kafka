@@ -1,5 +1,5 @@
 FROM python:3.12-slim
-LABEL org.opencontainers.image.source "https://github.com/navikt/dvh-airflow-kafka"
+LABEL org.opencontainers.image.source="https://github.com/navikt/dvh-airflow-kafka"
 
 RUN useradd --create-home apprunner
 
