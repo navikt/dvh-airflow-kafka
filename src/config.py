@@ -65,6 +65,11 @@ class KafkaConsumerStrategy(StrEnum):
     SUBSCRIBE = "subscribe"
 
 
+class MessageFilter(BaseModel):
+    key: str
+    allowed_value: str
+
+
 class SourceConfig(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
@@ -78,6 +83,7 @@ class SourceConfig(BaseModel):
     keypath_separator: Optional[str] = Field(None, alias="keypath-seperator")
     message_fields_filter: Optional[list] = Field(None, alias="message-fields-filter")
     flag_field_config: Optional[list] = Field(None, alias="flag-field-config")
+    message_filters: Optional[list[MessageFilter]] = Field(None, alias="message-filter")
     poll_timeout: int = Field(
         10,
         alias="poll-timeout",

@@ -188,6 +188,17 @@ class KafkaSource(Source):
         message["kafka_topic"] = msg.topic()
         message.update(self.value_deserializer(msg.value()))
 
+        # Ignore certain messages
+        message_filters = self.config.message_filters
+        if message_filters:
+            valid_message = False
+            for filter in message_filters:
+                # Keep only these messages
+                if filter.key in message and filter.allowed_value == message[filter.key]:
+                    valid_message = True
+                    break
+            if not valid_message:
+                message["kafka_message"] = None
         return message
 
     def _prepare_partitions(
