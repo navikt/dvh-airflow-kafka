@@ -1,55 +1,86 @@
 import pytest
-import os
 import json
-import uuid
 
 from confluent_kafka import Consumer
 from confluent_kafka.admin import NewTopic
 
-topic = "kafka_source"
+from ..kafka_source import KafkaSource
 
-
-@pytest.fixture
-def consumer_2(broker):
-    return Consumer(
-        {
-            "bootstrap.servers": broker,
-            "group.id": "testersen-id",
-            "auto.offset.reset": "earliest",
-            "enable.auto.commit": False,
-            "max.poll.interval.ms": 12000,
-            "session.timeout.ms": 10000,
-            "enable.partition.eof": True,
-        }
-    )
+TOPIC_NAME = "test-topic-kafka-source"
 
 
 @pytest.fixture(autouse=True)
-def setup_kafka_topic(kafka_admin_client, producer):
-
-    kafka_admin_client.create_topics([NewTopic(topic, 2)])
+def setUpKafka(producer, kafka_admin_client):
+    kafka_admin_client.create_topics([NewTopic(TOPIC_NAME, 2)])
     for i in range(4):
         producer.produce(
-            topic,
+            TOPIC_NAME,
             key=f"key{i}",
-            value=json.dumps({"id": i, "value": f"Message {i}"}),
+            value=json.dumps({"id": i, "value": f"Message {i}", "enum": "INTERESTING"}),
+            partition=i % 2,
+        )
+    for i in range(4, 8):
+        producer.produce(
+            TOPIC_NAME,
+            key=f"key{i}",
+            value=json.dumps({"id": i, "value": f"Message {i}", "enum": "NOT_RELEVANT"}),
             partition=i % 2,
         )
     producer.flush()
 
 
-def test_2_partitions(consumer_2):
-    consumer_2.subscribe([topic])
-    m = consumer_2.consume(6, 5)
-    consumer_2.commit()
-    consumer_2.close()
+@pytest.fixture
+def config1(base_config):
+    config = base_config
+    config["source"]["topic"] = TOPIC_NAME
+    config["source"]["strategy"] = "subscribe"
+    config["source"]["group-id"] = "test_kafka_source"
+    config["source"]["message-filters"] = [{"key": "enum", "allowed_value": "INTERESTING"}]
+    return config
 
 
-def test_2_partitions2(consumer_2):
-    consumer_2.subscribe([topic])
-    ms = []
-    for i in range(4):
-        ms.append(consumer_2.poll())
-    assert len(consumer_2.list_topics().topics[topic].partitions.keys()) == 2
-    consumer_2.commit()
-    consumer_2.close()
+def test_collect_message(consumer, config1):
+    consumer.subscribe([TOPIC_NAME])
+    messages = [consumer.poll() for _ in range(8)]
+    # consumer.commit()
+    consumer.close()
+
+    source = KafkaSource(config1["source"])
+
+    filtered_messages = [source.collect_message(m) for m in messages]
+    assert filtered_messages[0]["kafka_message"] is not None
+    assert filtered_messages[1]["kafka_message"] is not None
+    assert filtered_messages[4]["kafka_message"] is not None
+    assert filtered_messages[5]["kafka_message"] is not None
+    assert filtered_messages[2]["kafka_message"] == None
+    assert filtered_messages[3]["kafka_message"] == None
+    assert filtered_messages[6]["kafka_message"] == None
+    assert filtered_messages[7]["kafka_message"] == None
+
+
+@pytest.fixture
+def config_no_message_filter(base_config):
+    config = base_config
+    config["source"]["topic"] = TOPIC_NAME
+    config["source"]["strategy"] = "subscribe"
+    config["source"]["group-id"] = "test_kafka_source"
+    return config
+
+
+def test_collect_message(consumer, config_no_message_filter):
+    consumer.subscribe([TOPIC_NAME])
+    messages = [consumer.poll() for _ in range(8)]
+    # consumer.commit()
+    consumer.close()
+
+    source = KafkaSource(config_no_message_filter["source"])
+
+    filtered_messages = [source.collect_message(m) for m in messages]
+    assert filtered_messages[0]["kafka_message"] is not None
+    assert filtered_messages[1]["kafka_message"] is not None
+    assert filtered_messages[4]["kafka_message"] is not None
+    assert filtered_messages[5]["kafka_message"] is not None
+    assert filtered_messages[2]["kafka_message"] is not None
+    assert filtered_messages[3]["kafka_message"] is not None
+    assert filtered_messages[6]["kafka_message"] is not None
+    assert filtered_messages[7]["kafka_message"] is not None
