@@ -35,7 +35,7 @@ def config1(base_config):
     config["source"]["topic"] = TOPIC_NAME
     config["source"]["strategy"] = "subscribe"
     config["source"]["group-id"] = "test_kafka_source"
-    config["source"]["message-filter"] = [{"key": "enum", "allowed_value": "INTERESTING"}]
+    config["source"]["message-filters"] = [{"key": "enum", "allowed_value": "INTERESTING"}]
     return config
 
 

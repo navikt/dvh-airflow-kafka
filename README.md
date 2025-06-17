@@ -87,7 +87,7 @@ source:
     - key2/key3
   # OBS: Behold KUN de meldingene som matcher regelene nedenfor. Liste med key/value-pairs
   # Alle meldinger som ikke matcher vil bli satt til NONE
-  message-filter:
+  message-filters:
   - key: <feltnavn-kafka-message>
     allowed_value: <verdinavn du vil beholde>
   - key: <nytt eller samme feltnavn-kafka-message>
