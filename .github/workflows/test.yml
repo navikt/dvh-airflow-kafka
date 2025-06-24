@@ -2,6 +2,9 @@ name: Python CI
 
 on: [push, workflow_dispatch]
 
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: 3.12
   POETRY_VERSION: 2.1.1
