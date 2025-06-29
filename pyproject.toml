@@ -24,7 +24,7 @@ dependencies = [
 package-mode = false
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.4.0"
+pytest = "^8.4.1"
 black = "^25.1.0"
 python-schema-registry-client = "^2.6.1"
 testcontainers = "^4.10.0"
