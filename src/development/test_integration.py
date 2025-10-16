@@ -39,10 +39,14 @@ def assign_config(base_config):
     return config
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="session")
 def setup_kafka_for_integration(producer, broker, kafka_admin_client):
     os.environ["KAFKA_BROKERS"] = broker
-    kafka_admin_client.create_topics([NewTopic(TOPIC_NAME, 2)])
+    futures = kafka_admin_client.create_topics([NewTopic(topic=TOPIC_NAME, num_partitions=2), NewTopic(TOPIC_NAME_MORE_DATA, 2)])
+    futures[TOPIC_NAME].result()
+    futures[TOPIC_NAME_MORE_DATA].result()
+
+
     for i in range(n_kafka_messages):
         producer.produce(
             TOPIC_NAME,
@@ -53,16 +57,15 @@ def setup_kafka_for_integration(producer, broker, kafka_admin_client):
                     "value": f"Message {i}",
                 }
             ),
-            partition=i % 2,
+            partition=1 % 2,
             timestamp=int(datetime.timestamp(now - timedelta(days=(n_kafka_messages - i - 1)))),
         )
     producer.flush()
+    # check that the topics has been created
+    while TOPIC_NAME_MORE_DATA not in kafka_admin_client.list_topics().topics:
+        pass
 
-
-@pytest.fixture(autouse=True)
-def setup_kafka_for_integration_more_data(producer, broker, kafka_admin_client):
-    os.environ["KAFKA_BROKERS"] = broker
-    kafka_admin_client.create_topics([NewTopic(TOPIC_NAME_MORE_DATA, 2)])
+    # part 2
     for i in range(2):
         producer.produce(
             TOPIC_NAME_MORE_DATA,
@@ -90,6 +93,7 @@ def setup_kafka_for_integration_more_data(producer, broker, kafka_admin_client):
             timestamp=int(datetime.timestamp(now - timedelta(days=(n_kafka_messages - i - 1)))),
         )
     producer.flush()
+
 
 
 @pyinstrument.profile()
@@ -146,7 +150,10 @@ def test_run_assign(assign_config, transform_config):
             table_name = oracle_target.config.table
             cur.execute(f"select count(*) from {table_name}")
             r = cur.fetchone()
+            cur.execute(f"select count(*), kafka_partition from {table_name} group by kafka_partition")
+            r2 = cur.fetchall()
     assert r[0] == n_kafka_messages
+    print(r2)
 
 
 @pytest.fixture

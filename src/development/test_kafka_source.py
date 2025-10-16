@@ -9,9 +9,11 @@ from ..kafka_source import KafkaSource
 TOPIC_NAME = "test-topic-kafka-source"
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="session")
 def setUpKafka(producer, kafka_admin_client):
-    kafka_admin_client.create_topics([NewTopic(TOPIC_NAME, 2)])
+    futures = kafka_admin_client.create_topics([NewTopic(TOPIC_NAME, 2)])
+    futures[TOPIC_NAME].result()
+
     for i in range(4):
         producer.produce(
             TOPIC_NAME,
@@ -41,7 +43,7 @@ def config1(base_config):
 
 def test_collect_message(consumer, config1):
     consumer.subscribe([TOPIC_NAME])
-    messages = [consumer.poll() for _ in range(8)]
+    messages = [consumer.poll(timeout=10) for _ in range(8)]
     # consumer.commit()
     consumer.close()
 
@@ -67,9 +69,9 @@ def config_no_message_filter(base_config):
     return config
 
 
-def test_collect_message(consumer, config_no_message_filter):
+def test_collect_message_no_message_filter(consumer, config_no_message_filter):
     consumer.subscribe([TOPIC_NAME])
-    messages = [consumer.poll() for _ in range(8)]
+    messages = [consumer.poll(timeout=10) for _ in range(8)]
     # consumer.commit()
     consumer.close()
 
