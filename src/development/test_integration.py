@@ -57,7 +57,7 @@ def setup_kafka_for_integration(producer, broker, kafka_admin_client):
                     "value": f"Message {i}",
                 }
             ),
-            partition=1 % 2,
+            partition=i % 2,
             timestamp=int(datetime.timestamp(now - timedelta(days=(n_kafka_messages - i - 1)))),
         )
     producer.flush()
