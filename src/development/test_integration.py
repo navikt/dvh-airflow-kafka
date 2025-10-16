@@ -147,10 +147,7 @@ def test_run_assign(assign_config, transform_config):
             table_name = oracle_target.config.table
             cur.execute(f"select count(*) from {table_name}")
             r = cur.fetchone()
-            cur.execute(f"select count(*), kafka_partition from {table_name} group by kafka_partition")
-            r2 = cur.fetchall()
     assert r[0] == n_kafka_messages
-    print(r2)
 
 
 @pytest.fixture
