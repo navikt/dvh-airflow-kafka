@@ -61,9 +61,6 @@ def setup_kafka_for_integration(producer, broker, kafka_admin_client):
             timestamp=int(datetime.timestamp(now - timedelta(days=(n_kafka_messages - i - 1)))),
         )
     producer.flush()
-    # check that the topics has been created
-    while TOPIC_NAME_MORE_DATA not in kafka_admin_client.list_topics().topics:
-        pass
 
     # part 2
     for i in range(2):
