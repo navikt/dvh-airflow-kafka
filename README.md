@@ -26,6 +26,7 @@ DVH-AIRFLOW-KAFKA bruker `google secret manager` for å laste inn hemligheter fo
 
 Vi anbefaler å legge inn kafka hemligheten i `SOURCE_SECRET_PATH` og oracle hemlighetene i `TARGET_SECRET_PATH`. Alternativt kan de kombineres i en hemliget som angis av `PROJECT_SECRET_PATH`
 
+Airflow-operatorer [dv-a-team-dags/operators/kafka_operator.py](https://github.com/navikt/dv-a-team-dags/blob/main/operators/kafka_operator.py)
 
 Dette er miljøvariablene som forventes i SOURCE:
 ```json
@@ -52,7 +53,8 @@ Dette er miljøvariablene som forventes i TARGET:
 ```
 
 DVH-AIRFLOW-KAFKA forventer en miljøvariabler `CONSUMER_CONFIG` der verdien er en streng på `yaml` format. Det er denne som bestemmer hvor dataen hentes fra, hvordan den transformeres, og hvor den lagres.\
-Kodeeksempel [dv-a-team-dags](https://github.com/navikt/dv-a-team-dags/blob/main/consumer_configs/perm_config.py)
+
+Kodeeksempler [dv-a-team-dags/consumer_configs](https://github.com/navikt/dv-a-team-dags/tree/main/consumer_configs)
 
 Eksempel config:
 ```yaml
