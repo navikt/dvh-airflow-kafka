@@ -27,4 +27,4 @@ def test_consumer(consumer):
     consumer.commit()
     consumer.close()
 
-    assert json.loads(m1.value())["id"] in [0,1]
+    assert json.loads(m1.value())["id"] in [0, 1]
