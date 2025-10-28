@@ -39,10 +39,18 @@ def assign_config(base_config):
     return config
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="session")
 def setup_kafka_for_integration(producer, broker, kafka_admin_client):
     os.environ["KAFKA_BROKERS"] = broker
-    kafka_admin_client.create_topics([NewTopic(TOPIC_NAME, 2)])
+    futures = kafka_admin_client.create_topics(
+        [
+            NewTopic(topic=TOPIC_NAME, num_partitions=2),
+            NewTopic(TOPIC_NAME_MORE_DATA, 2),
+        ]
+    )
+    futures[TOPIC_NAME].result()
+    futures[TOPIC_NAME_MORE_DATA].result()
+
     for i in range(n_kafka_messages):
         producer.produce(
             TOPIC_NAME,
@@ -58,11 +66,7 @@ def setup_kafka_for_integration(producer, broker, kafka_admin_client):
         )
     producer.flush()
 
-
-@pytest.fixture(autouse=True)
-def setup_kafka_for_integration_more_data(producer, broker, kafka_admin_client):
-    os.environ["KAFKA_BROKERS"] = broker
-    kafka_admin_client.create_topics([NewTopic(TOPIC_NAME_MORE_DATA, 2)])
+    # part 2
     for i in range(2):
         producer.produce(
             TOPIC_NAME_MORE_DATA,

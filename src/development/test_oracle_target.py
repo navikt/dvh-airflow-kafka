@@ -15,7 +15,7 @@ def k67_filter():
         "filter-table": "person_ident",
         "filter-col": "person_id",
         "col-keypath-separator": ".",
-        "col": "person_id", # test nested: "person.id"
+        "col": "person_id",  # test nested: "person.id"
         "timestamp": "kafka_timestamp",
     }
 
@@ -76,7 +76,7 @@ def test_get_kode67(oracle_target: OracleTarget):
     data = [
         {
             "person_id": i,
-            "person": {"id": i}, # test nested
+            "person": {"id": i},  # test nested
             "kafka_timestamp": int(datetime(2025, 1, 1).timestamp()),
             "kafka_message": json.dumps(f"value_{i}"),
         }
@@ -93,7 +93,10 @@ def test_write_batch_with_kode67(oracle_target: OracleTarget, transform: Transfo
 
     data = []
     for i in range(5000):
-        melding = {"person_id": i, "value": f"melding {i}"} # test nested: {"person": {"id": i}, "value": f"melding {i}"}
+        melding = {
+            "person_id": i,
+            "value": f"melding {i}",
+        }  # test nested: {"person": {"id": i}, "value": f"melding {i}"}
         melding_json = json.dumps(melding)
         kafka_hash = hashlib.sha256(melding_json.encode("utf-8")).hexdigest()
         data.append(
