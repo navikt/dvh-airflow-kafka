@@ -6,16 +6,16 @@ Følg denne [guiden](kafka-topic.md) for å opprette en NAIS applikasjon som har
 
 ## Lokal utvikling - kjøre tester
 
-Krever at [Docker desktop](https://www.docker.com/products/docker-desktop/) (Krever lisen) og [Poetry](https://python-poetry.org/docs/) er installert. \
+Krever at [Docker desktop](https://www.docker.com/products/docker-desktop/) (Krever lisen) og [uv](https://docs.astral.sh/uv/getting-started/installation/) er installert. \
 [Podman](https://podman-desktop.io/tutorial/testcontainers-with-podman) er et godt alternativ til Docker Desktop.
 - [Podman desktop](https://podman-desktop.io/docs/migrating-from-docker/managing-docker-compatibility)
 - [env-vars-fix](https://stackoverflow.com/questions/67642620/docker-credential-desktop-not-installed-or-not-available-in-path)
 
 
 ```bash
-poetry run test
-poetry run pytest src/development/test_integration.py
-poetry run pytest src/development/test_integration.py::test_test_run_subscribe
+uv run pytest src
+uv run pytest src/development/test_integration.py
+uv run pytest src/development/test_integration.py::test_test_run_subscribe
 ```
 
 
