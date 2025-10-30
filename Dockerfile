@@ -1,17 +1,19 @@
 FROM python:3.12-slim
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 LABEL org.opencontainers.image.source="https://github.com/navikt/dvh-airflow-kafka"
 
+USER root
 RUN useradd --create-home apprunner
 
-COPY poetry.lock pyproject.toml ./
-
-RUN pip install poetry && \
-    poetry config virtualenvs.create false && \
-    poetry install --only main --no-root
+# Copy dependency files
+COPY . /app
 
 WORKDIR /app
 
-COPY . /app
+# Install dependencies in system Python (no virtual environment)
+RUN uv sync --locked
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 USER apprunner
 

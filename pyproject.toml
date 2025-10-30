@@ -20,20 +20,18 @@ dependencies = [
     "pydantic>=2.12.2",
 ]
 
-[tool.poetry]
-package-mode = false
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "ruff>=0.12.3",
+    "python-schema-registry-client>=2.6.1",
+    "testcontainers>=4.13.2",
+    "pyinstrument>=5.0.3",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.4.1"
-black = "^25.1.0"
-python-schema-registry-client = "^2.6.1"
-testcontainers = "^4.13.2"
-pyinstrument = "^5.0.3"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
+[tool.ruff]
+include = ["*.py", "*.ipynb"]
+line-length = 120
 
 # Pytest config
 [tool.pytest.ini_options]
