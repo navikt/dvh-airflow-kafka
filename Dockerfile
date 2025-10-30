@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python:3.12-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 LABEL org.opencontainers.image.source="https://github.com/navikt/dvh-airflow-kafka"
 
