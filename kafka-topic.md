@@ -18,15 +18,20 @@ Siden airflow kjører i knada sitt cluster, må vi hente credentials fra nais-ap
 
 1. [dvh-secret-tools](https://github.com/navikt/dvh-secret-tools)
 Python cli som henter kafka-hemmeligheter fra en nais app og legger det inn i en google secret. Verktøyet er inspirert av klipp og lim løsningen under, og du unngår å kopiere hemmeligheter i fritekst.
+   ```bash
+   poetry install
+   poetry run cli nais-kafka-to-gsm --help
+   poetry run cli env team-navn nais-credential-navn google-prosjekt google secret
+   ```
 
-2. Klipp og lim løsning
+3. Klipp og lim løsning
 - Hent credentials til en lokal fil `cred.txt`
     ```bash
     kubectl get secret -n <team-navn> <nais-hemmlighet-navn> -o yaml > cred.txt
     kubectl get secret -n dv-a-team dv-a-team-konsument-cred -o yaml > cred.txt
     ```
     Denne kommandoen laster ned applikasjonshemligher som er `encoded`.
-- Decode kafka hemmligheter med hjelp av et [cred_decoding.py](utviklingsmiljo/cred_decoding.py)
+- Decode kafka hemmligheter med hjelp av `convert_encode_to_decode` i [nais_cred.py](https://github.com/navikt/dvh-secret-tools/blob/main/dvh_secret_tools/nais_cred.py).
 - Last opp decoded hemmlighetene på json-format i en google secret. Dette gjør det enkelt å hente disse hemmlighetene og sette som miljøvariabler senere. Følgende variabler skal være i hemmligheten: `KAFKA_BROKERS, KAFKA_CA, KAFKA_CERTIFICATE, KAFKA_CREDSTORE_PASSWORD, KAFKA_PRIVATE_KEY, KAFKA_SCHEMA_REGISTRY, KAFKA_SCHEMA_REGISTRY_PASSWORD, KAFKA_SCHEMA_REGISTRY_USER, KAFKA_SECRET_UPDATED`
 
 
