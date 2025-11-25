@@ -24,11 +24,25 @@ SchemaCache = Dict[int, avro.io.DatumReader]
 @dataclass
 class ProcessSummary:
     event_count: int = 0
+    """Number of events processed (including empty and error events)"""
+
     data_count: int = 0
-    commit_count: int = 0
+    """Number of messages with data points processed"""
+
     error_count: int = 0
+    """Number of non-critical errors encountered"""
+
+    written_to_db_count: int = 0
+    """Number of messages successfully written to the target database"""
+
+    committed_to_producer_count: int = 0
+    """Number of messages successfully committed to the producer (-1 if polling)"""
+
     empty_count: int = 0
+    """Number of empty messages encountered"""
+
     non_empty_count: int = 0
+    """Number of non-empty messages encountered"""
 
 
 class KafkaSource(Source):
@@ -267,7 +281,7 @@ class KafkaSource(Source):
 
         # main loop
         batch: List[Dict[Text, Any]] = []
-        process_summary = ProcessSummary()
+        process_summary = ProcessSummary(committed_to_producer_count=-1)
         assignment_count = len(self.consumer.assignment())
         while assignment_count > 0:
             message: Message | None = self.consumer.poll(timeout=self.config.poll_timeout)
@@ -314,7 +328,7 @@ class KafkaSource(Source):
                     logging.info("Yielding kafka batch.")
 
                     yield batch, process_summary
-                    process_summary.commit_count += len(batch)
+                    process_summary.written_to_db_count += len(batch)
                     batch = []
             except Exception as exc:
                 process_summary.error_count += 1
@@ -322,7 +336,7 @@ class KafkaSource(Source):
                 if batch:
                     error_message = f"Bailing out..., after writing all {len(batch)} messages in batch. Processed: {process_summary}"
                     yield batch, process_summary
-                    process_summary.commit_count += len(batch)
+                    process_summary.written_to_db_count += len(batch)
                 else:
                     error_message = f"Bailing out..., no messages read. Processed: {process_summary}"
 
@@ -336,7 +350,71 @@ class KafkaSource(Source):
         if process_summary.error_count:
             logging.warning(f"Found {process_summary.error_count} non critical errors that could be retried")
 
-    def get_consumer(self) -> Consumer:
-        """Returnerer en kafka konsument som har abonnert på et topic"""
+    def read_subscribed_batches(self) -> Generator[Tuple[List[Dict[Text, Any]], ProcessSummary], None, None]:
+        process_summary = ProcessSummary()
         consumer = Consumer(self._kafka_config())
-        return consumer
+        consumer.subscribe([self.config.topic])
+        batch = []
+        try:
+            while True:
+                m = consumer.poll(
+                    timeout=self.config.poll_timeout,
+                )
+
+                if m is None:  # No messages
+                    logging.info("End of kafka log. Exiting")
+                    break
+
+                process_summary.event_count += 1
+                process_summary.non_empty_count += 1
+
+                err: KafkaError | None = m.error()
+                if err:
+                    if not err.retriable() or err.fatal():
+                        raise err
+                    logging.error(f"Message returned non-critical error: %s", {err})
+                    process_summary.error_count += 1
+                else:  # Handle proper message
+                    batch.append(self.collect_message(msg=m))
+                    process_summary.data_count += 1
+
+                if len(batch) == self.config.batch_size:
+                    yield batch, process_summary
+                    process_summary.written_to_db_count += len(batch)
+                    resp = consumer.commit(asynchronous=False)
+                    process_summary.committed_to_producer_count += len(batch)
+
+                    logging.info(
+                        f"Committed offsets: {",".join([f"Partition {tp.partition} offset {tp.offset} " for tp in resp])}"
+                    )
+                    logging.info(f"Commit response: %s", resp)
+
+                    batch = []
+        except Exception as exc:
+            process_summary.error_count += 1
+            if batch:
+                error_message = f"Bailing out..., after writing all {len(batch)} messages in batch. Processed: {process_summary}"
+                # handled in finally block
+            else:
+                error_message = f"Bailing out..., no messages read. Processed: {process_summary}"
+
+            logging.error(error_message)
+            raise exc
+        finally:
+            if batch:
+                yield batch, process_summary
+                process_summary.written_to_db_count += len(batch)
+                resp = consumer.commit(asynchronous=False)
+                process_summary.committed_to_producer_count += len(batch)
+                logging.info(
+                    f"Committed offsets: {",".join([f"Partition {tp.partition} offset {tp.offset}" for tp in resp])}"
+                )
+                logging.info("Commit response: %s", resp)
+
+            consumer.close()
+
+        logging.info(f"Completed. Processed: {process_summary}")
+        if process_summary.non_empty_count > 0:
+            logging.warning(f"Found {process_summary.empty_count} empty messages")
+        if process_summary.error_count:
+            logging.warning(f"Found {process_summary.error_count} non critical errors that could be retried")

@@ -43,53 +43,8 @@ class Mapping:
 
     def run_subscribe(self) -> ProcessSummary:
         process_summary = ProcessSummary()
-        consumer = self.source.get_consumer()
-        consumer.subscribe([self.source.config.topic])
-        batch = []
-        while True:
-
-            m = consumer.poll(
-                timeout=self.source.config.poll_timeout,
-            )
-
-            if m is None:  # No messages
-                logging.info("End of kafka log. Exiting")
-                break
-
-            process_summary.event_count += 1
-            process_summary.non_empty_count += 1
-
-            err: KafkaError | None = m.error()
-            if err:
-                if not err.retriable() or err.fatal():
-                    raise err
-                logging.error(f"Message returned non-critical error: %s", {err})
-                process_summary.error_count += 1
-            else:  # Handle proper message
-                batch.append(self.source.collect_message(msg=m))
-                process_summary.data_count += 1
-
-            if len(batch) == self.source.config.batch_size:
-                self.target.write_batch(batch, self.transform)  # Write batch to Oracle
-                resp = consumer.commit(asynchronous=False)
-                process_summary.commit_count += len(batch)
-
-                logging.info(
-                    f"Committed offsets: {",".join([f"Partition {tp.partition} offset {tp.offset} " for tp in resp])}"
-                )
-                logging.info(f"Commit response: %s", resp)
-
-                batch = []
-        if batch:
-            self.target.write_batch(batch, self.transform)  # Write batch to Oracle
-            process_summary.commit_count += len(batch)
-            resp = consumer.commit(asynchronous=False)
-            logging.info(
-                f"Committed offsets: {",".join([f"Partition {tp.partition} offset {tp.offset}" for tp in resp])}"
-            )
-            logging.info("Commit response: %s", resp)
-
-        consumer.close()
+        for batch, process_summary in self.source.read_subscribed_batches():
+            self.target.write_batch(batch, self.transform)
 
         return process_summary
 

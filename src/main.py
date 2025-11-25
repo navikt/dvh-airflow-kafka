@@ -44,7 +44,8 @@ def write_to_xcom(process_summary: ProcessSummary) -> None:
                 json.dumps(dict(
                     event_count=process_summary.event_count,
                     data_count=process_summary.data_count,
-                    commit_count=process_summary.commit_count,
+                    written_to_db_count=process_summary.written_to_db_count,
+                    committed_to_producer_count=process_summary.committed_to_producer_count,
                     error_count=process_summary.error_count,
                     empty_count=process_summary.empty_count,
                     non_empty_count=process_summary.non_empty_count
