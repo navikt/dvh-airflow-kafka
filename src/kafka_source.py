@@ -3,6 +3,7 @@ import io
 import json
 import os
 import struct
+from dataclasses import dataclass
 from typing import Generator, Dict, Text, Any, Tuple, List, Optional
 import logging
 import re
@@ -18,6 +19,16 @@ from .base import Source
 from .config import SchemaType, KeyDecoder
 
 SchemaCache = Dict[int, avro.io.DatumReader]
+
+
+@dataclass
+class ProcessSummary:
+    event_count: int = 0
+    data_count: int = 0
+    commit_count: int = 0
+    error_count: int = 0
+    empty_count: int = 0
+    non_empty_count: int = 0
 
 
 class KafkaSource(Source):
@@ -180,12 +191,13 @@ class KafkaSource(Source):
             consumer.incremental_unassign([tp])
 
     def collect_message(self, msg: Message) -> Dict[Text, Any]:
-        message = {}
-        message["kafka_key"] = self._key_deserializer(msg.key())
-        message["kafka_timestamp"] = msg.timestamp()[1]
-        message["kafka_offset"] = msg.offset()
-        message["kafka_partition"] = msg.partition()
-        message["kafka_topic"] = msg.topic()
+        message = dict(
+            kafka_key=self._key_deserializer(msg.key()),
+            kafka_timestamp=msg.timestamp()[1],
+            kafka_offset=msg.offset(),
+            kafka_partition=msg.partition(),
+            kafka_topic=msg.topic()
+        )
         message.update(self.value_deserializer(msg.value()))
 
         # Ignore certain messages
@@ -241,7 +253,7 @@ class KafkaSource(Source):
                 )
         return tp_to_assign_start, tp_to_assign_end
 
-    def read_polled_batches(self) -> Generator[List[Dict[Text, Any]], None, None]:
+    def read_polled_batches(self) -> Generator[Tuple[List[Dict[Text, Any]], ProcessSummary], None, None]:
         """
         reads messages from topic beginning (or end)
         or from custom offsets (silently ignored for non-existing partitions)
@@ -251,18 +263,19 @@ class KafkaSource(Source):
         tp_to_assign_start, tp_to_assign_end = self._prepare_partitions()
         topic_partitions = list(tp_to_assign_start.values())
         self.consumer.assign(topic_partitions)
-        logging.info(f"Assigned to {self.consumer.assignment()}.")
+        logging.info(f"Assigned to %s", self.consumer.assignment())
 
         # main loop
         batch: List[Dict[Text, Any]] = []
-        empty_counter, non_empty_counter = 0, 0
+        process_summary = ProcessSummary()
         assignment_count = len(self.consumer.assignment())
         while assignment_count > 0:
             message: Message | None = self.consumer.poll(timeout=self.config.poll_timeout)
+            process_summary.event_count += 1
             if message is None:
-                empty_counter += 1
+                process_summary.empty_count += 1
                 continue
-            non_empty_counter += 1
+            process_summary.non_empty_count += 1
             try:
                 err: KafkaError | None = message.error()
                 if err is not None:  # handle event or error
@@ -278,10 +291,12 @@ class KafkaSource(Source):
                         )
                         assignment_count -= 1
                     else:
-                        logging.error(err.str())
+                        logging.error(f"Message returned non-critical error: %s", {err})
+                        process_summary.error_count += 1
                 else:  # handle proper message
                     record = self.collect_message(message)
                     batch.append(record)
+                    process_summary.data_count += 1
 
                     # Check if message is the last one, if so unassign
                     if message.offset() >= tp_to_assign_end[message.partition()].offset:
@@ -298,26 +313,28 @@ class KafkaSource(Source):
                 if (len(batch) >= batch_size or assignment_count == 0) and len(batch) > 0:
                     logging.info("Yielding kafka batch.")
 
-                    yield batch
+                    yield batch, process_summary
+                    process_summary.commit_count += len(batch)
                     batch = []
             except Exception as exc:
+                process_summary.error_count += 1
                 self.consumer.close()
-                error_message = "Bailing out..."
                 if batch:
-                    error_message = (
-                        error_message + f", after writing all {len(batch)} messages in batch."
-                    )
-                    yield batch
+                    error_message = f"Bailing out..., after writing all {len(batch)} messages in batch. Processed: {process_summary}"
+                    yield batch, process_summary
+                    process_summary.commit_count += len(batch)
                 else:
-                    error_message = error_message + ", no messages read."
+                    error_message = f"Bailing out..., no messages read. Processed: {process_summary}"
 
                 logging.error(error_message)
                 raise exc
 
         self.consumer.close()
-        logging.info(f"Completed with {non_empty_counter} events consumed")
-        if empty_counter > 0:
-            logging.warning(f"found {empty_counter} empty messages")
+        logging.info(f"Completed. Processed: {process_summary}")
+        if process_summary.non_empty_count > 0:
+            logging.warning(f"Found {process_summary.empty_count} empty messages")
+        if process_summary.error_count:
+            logging.warning(f"Found {process_summary.error_count} non critical errors that could be retried")
 
     def get_consumer(self) -> Consumer:
         """Returnerer en kafka konsument som har abonnert på et topic"""

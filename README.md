@@ -52,7 +52,20 @@ Dette er miljøvariablene som forventes i TARGET:
 }
 ```
 
-DVH-AIRFLOW-KAFKA forventer en miljøvariabler `CONSUMER_CONFIG` der verdien er en streng på `yaml` format. Det er denne som bestemmer hvor dataen hentes fra, hvordan den transformeres, og hvor den lagres.\
+DVH-AIRFLOW-KAFKA forventer en miljøvariabler `CONSUMER_CONFIG` der verdien er en streng på `yaml` format. Det er denne som bestemmer hvor dataen hentes fra, hvordan den transformeres, og hvor den lagres.
+
+Konsumenten prosesserer alle meldinger i topicet. Dersom en melding feiler under prosessering, vurderes om feilen er kritisk eller ikke kan prøves på nytt. I såfall avsluttes kjøringen. Dersom feilen ikke er kritisk og den kan prøves på nytt, så registreres feilen og prosesseringen fortsetter. Etter endt prosessering skriver konsumenten slike feilmeldinger til loggen og avslutter med suksess (exit kode 0). 
+
+Antall meldinger totalt og antall feil logges til xcom:
+```json
+{
+    "messages": 10000,
+    "errors": 25
+}
+```
+
+
+For å avslutte prosessen med feil (exit kode 1) når det er flere enn én ikke-kritisk feil, sett miljøvariablen `FAIL_ON_NON_CRITICAL_ERROR` til `true`.
 
 Kodeeksempler [dv-a-team-dags/consumer_configs](https://github.com/navikt/dv-a-team-dags/tree/main/consumer_configs)
 

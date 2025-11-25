@@ -1,13 +1,12 @@
-import os
 import logging
 from datetime import datetime, timezone
 
 from confluent_kafka import KafkaError, TopicPartition
 
-from .kafka_source import KafkaSource
+from .config import KafkaConsumerStrategy
+from .kafka_source import KafkaSource, ProcessSummary
 from .oracle_target import OracleTarget
 from .transform import Transform
-from .config import KafkaConsumerStrategy
 
 
 class Mapping:
@@ -35,18 +34,15 @@ class Mapping:
         self.total_messages = 0
         self.start_timestamp = int(datetime.now(timezone.utc).timestamp())
 
-    def run_assign(self) -> None:
-        total_messages = 0
-        for batch in self.source.read_polled_batches():
-            total_messages += len(batch)
+    def run_assign(self) -> ProcessSummary:
+        process_summary = ProcessSummary()
+        for batch, process_summary in self.source.read_polled_batches():
             self.target.write_batch(batch, self.transform)
-        if os.environ["ENVIRONMENT"] != "LOCAL":
-            with open("/airflow/xcom/return.json", "w") as xcom:
-                xcom.write(str(total_messages))
 
-    def run_subscribe(self) -> None:
-        total_messages = 0
-        num_messages_with_error = 0
+        return process_summary
+
+    def run_subscribe(self) -> ProcessSummary:
+        process_summary = ProcessSummary()
         consumer = self.source.get_consumer()
         consumer.subscribe([self.source.config.topic])
         batch = []
@@ -56,45 +52,57 @@ class Mapping:
                 timeout=self.source.config.poll_timeout,
             )
 
-            if m == None:  # No messages
+            if m is None:  # No messages
                 logging.info("End of kafka log. Exiting")
                 break
+
+            process_summary.event_count += 1
+            process_summary.non_empty_count += 1
 
             err: KafkaError | None = m.error()
             if err:
                 if not err.retriable() or err.fatal():
                     raise err
-                logging.info(f"Message returned error {err}")
-                num_messages_with_error += 1
+                logging.error(f"Message returned non-critical error: %s", {err})
+                process_summary.error_count += 1
             else:  # Handle proper message
                 batch.append(self.source.collect_message(msg=m))
+                process_summary.data_count += 1
 
             if len(batch) == self.source.config.batch_size:
                 self.target.write_batch(batch, self.transform)  # Write batch to Oracle
                 resp = consumer.commit(asynchronous=False)
+                process_summary.commit_count += len(batch)
 
                 logging.info(
                     f"Committed offsets: {",".join([f"Partition {tp.partition} offset {tp.offset} " for tp in resp])}"
                 )
+                logging.info(f"Commit response: %s", resp)
 
-                logging.info(f"Commit response: {resp}")
-
-                total_messages += len(batch)
                 batch = []
         if batch:
             self.target.write_batch(batch, self.transform)  # Write batch to Oracle
-            total_messages += len(batch)
+            process_summary.commit_count += len(batch)
             resp = consumer.commit(asynchronous=False)
             logging.info(
                 f"Committed offsets: {",".join([f"Partition {tp.partition} offset {tp.offset}" for tp in resp])}"
             )
-            logging.info(f"Commit response: {resp}")
-        logging.info(f"{total_messages} messages consumed")
-        logging.info(f"{num_messages_with_error} messages with error")
+            logging.info("Commit response: %s", resp)
+
         consumer.close()
 
-    def run(self) -> None:
+        return process_summary
+
+    def run(self) -> ProcessSummary:
         if self.source.config.strategy == KafkaConsumerStrategy.ASSIGN:
-            return self.run_assign()
-        if self.source.config.strategy == KafkaConsumerStrategy.SUBSCRIBE:
-            return self.run_subscribe()
+            process_summary = self.run_assign()
+        elif self.source.config.strategy == KafkaConsumerStrategy.SUBSCRIBE:
+            process_summary = self.run_subscribe()
+        else:
+            raise ValueError(
+                f"Unsupported Kafka consumer strategy: {self.source.config.strategy}"
+            )
+
+        logging.info(f"Process summary: {process_summary}")
+
+        return process_summary
