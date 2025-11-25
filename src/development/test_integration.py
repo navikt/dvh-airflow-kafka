@@ -7,6 +7,9 @@ import json
 
 from confluent_kafka.admin import NewTopic
 
+from src.mapping import Mapping
+from src.oracle_target import OracleTarget
+
 from ..transform import Transform
 from ..mapping import Mapping
 from ..kafka_source import KafkaSource
@@ -40,6 +43,27 @@ def assign_config(base_config):
     config["target"]["table"] = TABLE_NAME
     return config
 
+def setup_mapping( assign_config, transform_config) -> tuple[OracleTarget, Mapping]:
+    os.environ["DATA_INTERVAL_START"] = str(
+        int(datetime.timestamp(now - timedelta(days=(n_kafka_messages))))
+    )
+    os.environ["DATA_INTERVAL_END"] = str(
+        int(
+            datetime.timestamp(now + timedelta(days=(n_kafka_messages - n_kafka_messages // 2 - 1)))
+        )
+    )
+    kafka_source = KafkaSource(assign_config["source"])
+    oracle_target = OracleTarget(assign_config["target"])
+    transform = Transform(transform_config)
+    return oracle_target, Mapping(kafka_source, oracle_target, transform)
+
+def get_kafka_messages( oracle_target):
+    with oracle_target._oracle_connection() as con:
+        with con.cursor() as cur:
+            table_name = oracle_target.config.table
+            cur.execute(f"select kafka_key, kafka_topic, kafka_message from {table_name}")
+            rows = [(r[0], r[1], r[2].read()) for r in cur.fetchall()]
+            return rows
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_kafka_for_integration(producer, broker, kafka_admin_client):
@@ -113,60 +137,26 @@ class TestSubscribe:
 
     @pyinstrument.profile()
     def test_run_subscribe(self, subscribe_config, transform_config):
-        transform = Transform(transform_config)
-        kafka_source = KafkaSource(subscribe_config["source"])
-        oracle_target = OracleTarget(subscribe_config["target"])
-        mapping = Mapping(kafka_source, oracle_target, transform)
-
+        oracle_target, mapping = setup_mapping(subscribe_config, transform_config)
         mapping.run()
 
-        with oracle_target._oracle_connection() as con:
-            with con.cursor() as cur:
-                table_name = oracle_target.config.table
-                cur.execute(f"select kafka_key, kafka_topic, kafka_message from {table_name}")
-                r = cur.fetchone()
-        assert r[1] == TOPIC_NAME
-
-        with oracle_target._oracle_connection() as con:
-            with con.cursor() as cur:
-                table_name = oracle_target.config.table
-                cur.execute(f"select count(*) from {table_name}")
-                r = cur.fetchone()
-        assert r[0] == n_kafka_messages
+        rows = get_kafka_messages(oracle_target)
+        assert rows[0][1] == TOPIC_NAME
+        assert len(rows) == n_kafka_messages
 
 
 class TestAssign:
+
     @pyinstrument.profile()
     def test_run_assign(self, assign_config, transform_config):
-        os.environ["DATA_INTERVAL_START"] = str(
-            int(datetime.timestamp(now - timedelta(days=(n_kafka_messages))))
-        )
-        os.environ["DATA_INTERVAL_END"] = str(
-            int(
-                datetime.timestamp(now + timedelta(days=(n_kafka_messages - n_kafka_messages // 2 - 1)))
-            )
-        )
-        kafka_source = KafkaSource(assign_config["source"])
-        oracle_target = OracleTarget(assign_config["target"])
-        transform = Transform(transform_config)
-        mapping = Mapping(kafka_source, oracle_target, transform)
-
+        oracle_target, mapping = setup_mapping(assign_config, transform_config)
         mapping.run()
 
-        with oracle_target._oracle_connection() as con:
-            with con.cursor() as cur:
-                table_name = oracle_target.config.table
-                cur.execute(f"select kafka_key, kafka_topic, kafka_message from {table_name}")
-                r = cur.fetchone()
-                print(r[2])
+        rows = get_kafka_messages(oracle_target)
+        r = rows[0]
+        print(r[2])
         assert r[1] == TOPIC_NAME
-
-        with oracle_target._oracle_connection() as con:
-            with con.cursor() as cur:
-                table_name = oracle_target.config.table
-                cur.execute(f"select count(*) from {table_name}")
-                r = cur.fetchone()
-        assert r[0] == n_kafka_messages
+        assert len(rows) == n_kafka_messages
 
 
     @pytest.fixture
@@ -188,28 +178,11 @@ class TestAssign:
 
     @pyinstrument.profile()
     def test_run_assign_flag_field(self, assign_config_flag_field, transform_config):
-        assign_config = assign_config_flag_field
-        os.environ["DATA_INTERVAL_START"] = str(
-            int(datetime.timestamp(now - timedelta(days=(n_kafka_messages))))
-        )
-        os.environ["DATA_INTERVAL_END"] = str(
-            int(
-                datetime.timestamp(now + timedelta(days=(n_kafka_messages - n_kafka_messages // 2 - 1)))
-            )
-        )
-        kafka_source = KafkaSource(assign_config["source"])
-        oracle_target = OracleTarget(assign_config["target"])
-        transform = Transform(transform_config)
-        mapping = Mapping(kafka_source, oracle_target, transform)
-
+        oracle_target, mapping = setup_mapping(assign_config_flag_field, transform_config)
         mapping.run()
 
-        with oracle_target._oracle_connection() as con:
-            with con.cursor() as cur:
-                table_name = oracle_target.config.table
-                cur.execute(f"select kafka_key, kafka_topic, kafka_message from {table_name}")
-                r = cur.fetchone()
-                obj = json.load(r[2])
+        rows = get_kafka_messages(oracle_target)
+        obj = json.loads(rows[0][2])
 
         assert obj["nested"] == 1
         assert obj["nested2"] == 0
