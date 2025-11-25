@@ -18,6 +18,7 @@ uv run pytest src/development/test_integration.py
 uv run pytest src/development/test_integration.py::test_test_run_subscribe
 ```
 
+Sett miljøvariablen `KEEP_CONTAINERS` til `true` for å beholde containerne etter kjøring av tester. Da kjører testene mye raskere, men man må selv rydde opp i containerne etterpå. Når man omstarter docker/podman, må man selv starte containerne på nytt. Navn på containere er `testcontainer-dvh-airflow-kafka-broker` og `testcontainer-dvh-airflow-kafka-oracle-db`.
 
 ## Bruke kafka-konsument i Airflow
 DVH-AIRFLOW-KAFKA bruker `google secret manager` for å laste inn hemligheter for å koble til et kafka topic og oracle. Du angir navnet på hemlighetene slik at konsumenten kan laste inn hemlighetene som miljøvariabler. Som bruker har du disse mulighetene:
