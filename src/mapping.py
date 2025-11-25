@@ -62,6 +62,8 @@ class Mapping:
 
             err: KafkaError | None = m.error()
             if err:
+                if not err.retriable() or err.fatal():
+                    raise err
                 logging.info(f"Message returned error {err}")
                 num_messages_with_error += 1
             else:  # Handle proper message
