@@ -58,6 +58,10 @@ class Mapping:
                 f"Unsupported Kafka consumer strategy: {self.source.config.strategy}"
             )
 
-        logging.info(f"Process summary: {process_summary}")
+        logging.info(f"Completed. Processed: {process_summary}")
+        if process_summary.non_empty_count > 0:
+            logging.warning(f"Found {process_summary.empty_count} empty messages")
+        if process_summary.error_count:
+            logging.warning(f"Found {process_summary.error_count} non critical errors that could be retried")
 
         return process_summary

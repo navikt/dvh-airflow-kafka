@@ -81,6 +81,24 @@ class KafkaSource(Source):
         else:
             raise ValueError(f"Decode: {self.config.key_decoder} not valid. Use utf-8 or int-64")
 
+    @staticmethod
+    def clean_config(dictionary: benedict[str, Any], filter_config: list | None, flag_field_config: list | None):
+        if filter_config is not None:
+            keypaths = dictionary.keypaths(indexes=True, sort=False)
+
+            for key in keypaths:
+                cleaned_key = re.sub(r"\[\d+\]", "", key)
+                if cleaned_key in filter_config:
+                    dictionary.remove(key)
+
+        if flag_field_config is not None:
+            keypaths = dictionary.keypaths(indexes=True, sort=False)
+
+            for key in keypaths:
+                cleaned_key = re.sub(r"\[\d+\]", "", key)
+                if cleaned_key in flag_field_config:
+                    dictionary[key] = 1 if dictionary[key] is not None else 0
+
     def _json_deserializer(self, message_value: bytes) -> Dict[Text, Any]:
         if message_value is None:
             return benedict(dict(kafka_hash=None, kafka_message=None))
@@ -90,22 +108,8 @@ class KafkaSource(Source):
         dictionary = benedict(message, keypath_separator=keypath_separator)
 
         filter_config = self.config.message_fields_filter
-        if filter_config is not None:
-            keypaths = dictionary.keypaths(indexes=True, sort=False)
-
-            for key in keypaths:
-                cleaned_key = re.sub(r"\[\d+\]", "", key)
-                if cleaned_key in filter_config:
-                    dictionary.remove(key)
-
         flag_field_config = self.config.flag_field_config
-        if flag_field_config is not None:
-            keypaths = dictionary.keypaths(indexes=True, sort=False)
-
-            for key in keypaths:
-                cleaned_key = re.sub(r"\[\d+\]", "", key)
-                if cleaned_key in flag_field_config:
-                    dictionary[key] = 1 if dictionary[key] != None else 0
+        self.clean_config(dictionary, filter_config, flag_field_config)
 
         kafka_hash = hashlib.sha256(message_value).hexdigest()
         kafka_message = json.dumps(dictionary, ensure_ascii=False)
@@ -138,22 +142,8 @@ class KafkaSource(Source):
             dictionary.keypath_separator = separator
 
         filter_config = self.config.message_fields_filter
-        if filter_config is not None:
-            keypaths = dictionary.keypaths(indexes=True, sort=False)
-
-            for key in keypaths:
-                cleaned_key = re.sub(r"\[\d+\]", "", key)
-                if cleaned_key in filter_config:
-                    dictionary.remove(key)
-
         flag_field_config = self.config.flag_field_config
-        if flag_field_config is not None:
-            keypaths = dictionary.keypaths(indexes=True, sort=False)
-
-            for key in keypaths:
-                cleaned_key = re.sub(r"\[\d+\]", "", key)
-                if cleaned_key in flag_field_config:
-                    dictionary[key] = 1 if dictionary[key] != None else 0
+        self.clean_config(dictionary, filter_config, flag_field_config)
 
         dictionary["kafka_message"] = json.dumps(dictionary, default=str, ensure_ascii=False)
         dictionary["kafka_schema_id"] = schema_id
@@ -218,9 +208,9 @@ class KafkaSource(Source):
         message_filters = self.config.message_filters
         if message_filters:
             valid_message = False
-            for filter in message_filters:
+            for msg_filter in message_filters:
                 # Keep only these messages
-                if filter.key in message and filter.allowed_value == message[filter.key]:
+                if msg_filter.key in message and msg_filter.allowed_value == message[msg_filter.key]:
                     valid_message = True
                     break
             if not valid_message:
@@ -283,14 +273,15 @@ class KafkaSource(Source):
         batch: List[Dict[Text, Any]] = []
         process_summary = ProcessSummary(committed_to_producer_count=-1)
         assignment_count = len(self.consumer.assignment())
-        while assignment_count > 0:
-            message: Message | None = self.consumer.poll(timeout=self.config.poll_timeout)
-            process_summary.event_count += 1
-            if message is None:
-                process_summary.empty_count += 1
-                continue
-            process_summary.non_empty_count += 1
-            try:
+        try:
+            while assignment_count > 0:
+                message: Message | None = self.consumer.poll(timeout=self.config.poll_timeout)
+                process_summary.event_count += 1
+                if message is None:
+                    process_summary.empty_count += 1
+                    continue
+                process_summary.non_empty_count += 1
+
                 err: KafkaError | None = message.error()
                 if err is not None:  # handle event or error
                     if not err.retriable() or err.fatal():
@@ -330,25 +321,20 @@ class KafkaSource(Source):
                     yield batch, process_summary
                     process_summary.written_to_db_count += len(batch)
                     batch = []
-            except Exception as exc:
-                process_summary.error_count += 1
-                self.consumer.close()
-                if batch:
-                    error_message = f"Bailing out..., after writing all {len(batch)} messages in batch. Processed: {process_summary}"
-                    yield batch, process_summary
-                    process_summary.written_to_db_count += len(batch)
-                else:
-                    error_message = f"Bailing out..., no messages read. Processed: {process_summary}"
+        except Exception as exc:
+            process_summary.error_count += 1
+            if batch:
+                error_message = f"Bailing out..., after writing all {len(batch)} messages in batch. Processed: {process_summary}"
+                yield batch, process_summary
+                process_summary.written_to_db_count += len(batch)
+            else:
+                error_message = f"Bailing out..., no messages read. Processed: {process_summary}"
 
-                logging.error(error_message)
-                raise exc
+            logging.error(error_message)
+            raise exc
 
-        self.consumer.close()
-        logging.info(f"Completed. Processed: {process_summary}")
-        if process_summary.non_empty_count > 0:
-            logging.warning(f"Found {process_summary.empty_count} empty messages")
-        if process_summary.error_count:
-            logging.warning(f"Found {process_summary.error_count} non critical errors that could be retried")
+        finally:
+            self.consumer.close()
 
     def read_subscribed_batches(self) -> Generator[Tuple[List[Dict[Text, Any]], ProcessSummary], None, None]:
         process_summary = ProcessSummary()
@@ -381,13 +367,8 @@ class KafkaSource(Source):
                 if len(batch) == self.config.batch_size:
                     yield batch, process_summary
                     process_summary.written_to_db_count += len(batch)
-                    resp = consumer.commit(asynchronous=False)
+                    self.subscribe_commit(consumer)
                     process_summary.committed_to_producer_count += len(batch)
-
-                    logging.info(
-                        f"Committed offsets: {",".join([f"Partition {tp.partition} offset {tp.offset} " for tp in resp])}"
-                    )
-                    logging.info(f"Commit response: %s", resp)
 
                     batch = []
         except Exception as exc:
@@ -404,17 +385,16 @@ class KafkaSource(Source):
             if batch:
                 yield batch, process_summary
                 process_summary.written_to_db_count += len(batch)
-                resp = consumer.commit(asynchronous=False)
+                self.subscribe_commit(consumer)
                 process_summary.committed_to_producer_count += len(batch)
-                logging.info(
-                    f"Committed offsets: {",".join([f"Partition {tp.partition} offset {tp.offset}" for tp in resp])}"
-                )
-                logging.info("Commit response: %s", resp)
 
             consumer.close()
 
-        logging.info(f"Completed. Processed: {process_summary}")
-        if process_summary.non_empty_count > 0:
-            logging.warning(f"Found {process_summary.empty_count} empty messages")
-        if process_summary.error_count:
-            logging.warning(f"Found {process_summary.error_count} non critical errors that could be retried")
+    @staticmethod
+    def subscribe_commit(consumer: Consumer):
+        resp = consumer.commit(asynchronous=False)
+
+        logging.info(
+            f"Committed offsets: {",".join([f"Partition {tp.partition} offset {tp.offset} " for tp in resp])}"
+        )
+        logging.info(f"Commit response: %s", resp)
