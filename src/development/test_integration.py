@@ -53,7 +53,7 @@ class Row:
     object: dict
 
 def get_kafka_messages(oracle_target, topic) -> list[Row]:
-    with oracle_target._oracle_connection() as con:
+    with oracle_target.oracle_connection() as con:
         with con.cursor() as cur:
             table_name = oracle_target.config.table
             cur.execute(f"select kafka_key, kafka_topic, kafka_message from {table_name} "

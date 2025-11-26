@@ -146,7 +146,7 @@ def create_table(table_name, columns):
 
     sql = f"""create table SYSTEM.{table_name} ({",".join(columns)}) """
 
-    with OracleTarget._oracle_connection() as con:
+    with OracleTarget.oracle_connection() as con:
         with con.cursor() as cur:
             cur.execute(sql)
         con.commit()
@@ -155,7 +155,7 @@ def create_table(table_name, columns):
 def drop_table(table_name):
     sql = f"""drop table SYSTEM.{table_name} """
 
-    with OracleTarget._oracle_connection() as con:
+    with OracleTarget.oracle_connection() as con:
         with con.cursor() as cur:
             cur.execute(sql)
         con.commit()
@@ -166,7 +166,7 @@ def table_insert(table_name, data):
     columns = ", ".join(data[0].keys())
     values = ", ".join([f":{key}" for key in data[0].keys()])
     sql = f"INSERT INTO SYSTEM.{table_name} ({columns}) VALUES ({values})"
-    with OracleTarget._oracle_connection() as con:
+    with OracleTarget.oracle_connection() as con:
         with con.cursor() as cur:
             cur.executemany(sql, data)
         con.commit()
