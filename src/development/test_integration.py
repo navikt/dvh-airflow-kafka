@@ -1,12 +1,16 @@
+import hashlib
 import time
 from dataclasses import dataclass
+from unittest.mock import patch, Mock, MagicMock
 
 import pytest
 import os
 from datetime import datetime, timedelta
 import json
 
+from confluent_kafka import KafkaException, Producer
 from confluent_kafka.admin import NewTopic
+from requests.cookies import MockRequest
 
 from src.mapping import Mapping
 from src.oracle_target import OracleTarget
@@ -31,7 +35,7 @@ def build_config(base_config, topic_name: str, strategy: str) -> dict:
     return base_config
 
 
-def setup_mapping( assign_config, transform_config) -> tuple[OracleTarget, Mapping]:
+def setup_mapping(assign_config, transform_config) -> tuple[OracleTarget, Mapping]:
     os.environ["DATA_INTERVAL_START"] = str(
         int(datetime.timestamp(NOW - timedelta(days=MAX_NUM_KAFKA_MESSAGES)))
     )
@@ -48,18 +52,40 @@ def setup_mapping( assign_config, transform_config) -> tuple[OracleTarget, Mappi
 @dataclass
 class Row:
     key: str
+    offset: int
+    partition: int
+    timestamp: datetime
     topic: str
+    hash: str
     message: str
+    lastet_tid: datetime
+    kildesystem: str
     object: dict
 
 def get_kafka_messages(oracle_target, topic) -> list[Row]:
     with oracle_target.oracle_connection() as con:
         with con.cursor() as cur:
             table_name = oracle_target.config.table
-            cur.execute(f"select kafka_key, kafka_topic, kafka_message from {table_name} "
+            cur.execute(f"select kafka_key, kafka_offset, kafka_partition, kafka_timestamp, kafka_topic, kafka_hash, kafka_message, lastet_tid, kildesystem "
+                        f"from {table_name} "
                         f"where kafka_topic = :topic order by kafka_timestamp",
                         topic=topic)
-            rows = [Row(r[0], r[1], r[2].read(), json.loads(r[2].read())) for r in cur.fetchall()]
+
+            rows = []
+            for row in cur.fetchall():
+                rows.append(Row(
+                    key=row[0],
+                    offset=row[1],
+                    partition=row[2],
+                    timestamp=row[3],
+                    topic=row[4],
+                    hash=row[5],
+                    message=row[6].read(),
+                    lastet_tid=row[7],
+                    kildesystem=row[8],
+                    object=json.loads(row[6].read())
+                ))
+
             return rows
 
 
@@ -71,6 +97,15 @@ def create_topic(kafka_admin_client, topic_name: str, num_partitions: int = 1):
 
 def get_kafka_timestamp(message_offset: int) -> int:
     return int(datetime.timestamp(NOW - timedelta(days=(MAX_NUM_KAFKA_MESSAGES - message_offset - 1))))
+
+def produce_default_message(producer: Producer, topic: str, i: int, partition: int = None):
+    producer.produce(
+        topic,
+        key=f"key{i}",
+        value=json.dumps(dict(id=i, value=f"Message {i}")),
+        partition=partition or 0,
+        timestamp=get_kafka_timestamp(i),
+    )
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_kafka_for_integration(producer, broker, kafka_admin_client):
@@ -88,32 +123,98 @@ def setup_kafka_for_integration(producer, broker, kafka_admin_client):
 
 
 @pytest.mark.parametrize("strategy", ["subscribe", "assign"])
-def test_many_messages_produced(base_config, kafka_admin_client, transform_config, producer, strategy):
-    topic = f"test_many_messages_produced_{strategy}"
+@pytest.mark.parametrize("batch_size", ["msg_count_lt_batch", "msg_count_eq_batch", "msg_count_gt_batch"])
+def test_many_messages(base_config, kafka_admin_client, transform_config, producer, strategy, batch_size):
+    topic = f"test_many_messages_{strategy}_{batch_size}"
     config = build_config(base_config, topic, strategy)
     create_topic(kafka_admin_client, topic, num_partitions=2)
     oracle_target, mapping = setup_mapping(config, transform_config)
 
-    for i in range(100):
-        producer.produce(
-            topic,
-            key=f"key{i}",
-            value=json.dumps(dict(id=i, value=f"Message {i}")),
-            partition=i % 2,
-            timestamp=get_kafka_timestamp(i),
-        )
+    if batch_size == "msg_count_lt_batch":
+        messages_count = config["source"]["batch-size"] - 2
+    elif batch_size == "msg_count_eq_batch":
+        messages_count = config["source"]["batch-size"]
+    else:  # "msg_count_gt_batch"
+        messages_count = config["source"]["batch-size"] + 2
+
+    for i in range(messages_count):
+        produce_default_message(producer, topic, i, partition=i%2)
+    producer.flush()
+
+    summary = mapping.run()
+
+    assert summary.event_count == messages_count
+    assert summary.data_count == messages_count
+    assert summary.error_count == 0
+    assert summary.written_to_db_count == messages_count
+    assert summary.committed_to_producer_count == (-1 if strategy == "assign" else messages_count)
+    assert summary.empty_count == 0
+    assert summary.non_empty_count == messages_count
+
+    rows = get_kafka_messages(oracle_target, topic)
+    assert len(rows) == messages_count
+    for i in range(messages_count):
+        assert rows[i].topic == topic
+        assert rows[i].key == f"key{i}"
+        assert rows[i].offset == i // 2  # starts at 0 for each partition
+        assert rows[i].partition == i % 2
+        assert rows[i].hash == hashlib.sha256(rows[i].message.encode("utf-8")).hexdigest()
+        assert (rows[i].lastet_tid - datetime.now()) < timedelta(seconds=10)
+        assert rows[i].object["id"] == i
+        assert rows[i].object["value"] == f"Message {i}"
+
+
+@pytest.mark.parametrize("strategy", ["subscribe", "assign"])
+def test_incremental_consumption(base_config, kafka_admin_client, transform_config, producer, strategy):
+    """Test that running the mapping multiple times only consumes new messages"""
+    topic = f"test_incremental_consumption_{strategy}"
+    config = build_config(base_config, topic, strategy)
+    create_topic(kafka_admin_client, topic, num_partitions=2)
+    oracle_target, mapping = setup_mapping(config, transform_config)
+
+    produce_default_message(producer, topic, 0, partition=0)
+    produce_default_message(producer, topic, 1, partition=1)
     producer.flush()
 
     mapping.run()
 
     rows = get_kafka_messages(oracle_target, topic)
-    assert len(rows) == 100
-    assert rows[0].topic == topic
-    assert rows[0].key == "key0"
-    assert rows[0].object["id"] == 0
-    assert rows[0].object["value"] == "Message 0"
+    ids = [row.object["id"] for row in rows]
+    assert ids == [0, 1]
 
-    assert rows[1].object["id"] == 1
+    produce_default_message(producer, topic, 2, partition=0)
+    produce_default_message(producer, topic, 3, partition=1)
+    producer.flush()
+
+    mapping.run()
+
+    rows = get_kafka_messages(oracle_target, topic)
+    ids = [row.object["id"] for row in rows]
+    assert ids == [0, 1, 2, 3]
+
+@pytest.mark.parametrize("strategy", ["subscribe", "assign"])
+def test_incremental_consumption_no_new_messages(base_config, kafka_admin_client, transform_config, producer, strategy):
+    """Test that running the mapping multiple times without new messages does not duplicate messages"""
+    topic = f"test_incremental_consumption_no_new_messages_{strategy}"
+    config = build_config(base_config, topic, strategy)
+    create_topic(kafka_admin_client, topic, num_partitions=2)
+    oracle_target, mapping = setup_mapping(config, transform_config)
+
+    produce_default_message(producer, topic, 0, partition=0)
+    produce_default_message(producer, topic, 1, partition=1)
+    producer.flush()
+
+    mapping.run()
+
+    rows = get_kafka_messages(oracle_target, topic)
+    ids = [row.object["id"] for row in rows]
+    assert ids == [0, 1]
+
+    mapping.run()
+
+    rows = get_kafka_messages(oracle_target, topic)
+    ids = [row.object["id"] for row in rows]
+    assert ids == [0, 1]
 
 
 @pytest.mark.parametrize("strategy", ["subscribe", "assign"])
@@ -174,3 +275,124 @@ def test_run_assign_flag_field(base_config, kafka_admin_client, transform_config
     assert obj["nested6"][0]["nested7"][0]["key"] == 1
 
     assert rows[1].object["id"] == 1
+
+@pytest.mark.parametrize("strategy", ["subscribe", "assign"])
+def test_fatal_error(base_config, kafka_admin_client, transform_config, producer, strategy):
+    """Test that a fatal error commits processed messages, but no further messages are processed"""
+    topic = f"test_fatal_error_{strategy}"
+    config = build_config(base_config, topic, strategy)
+    create_topic(kafka_admin_client, topic)
+    oracle_target, mapping = setup_mapping(config, transform_config)
+
+    produce_default_message(producer, topic, 0)
+    produce_default_message(producer, topic, 1)
+    producer.flush()
+
+    message_mock = MagicMock()
+    error_mock = MagicMock()
+    error_mock.retriable.return_value = False
+    error_mock.fatal.return_value = True
+    message_mock.error.return_value = error_mock
+
+    counter = 0
+    def fake_poll():
+        nonlocal counter
+        counter += 1
+        if counter == 2:
+            return message_mock
+        else:
+            return mapping.source.consumer.poll(timeout=5.0)
+
+    with patch.object(mapping.source, "_poll") as mock_poll:
+        mock_poll.side_effect = fake_poll
+        with pytest.raises(KafkaException):
+            mapping.run()
+
+    rows = get_kafka_messages(oracle_target, topic)
+    ids = [row.object["id"] for row in rows]
+    assert ids == [0]
+
+    # process the rest of it
+    mapping.run()
+    rows = get_kafka_messages(oracle_target, topic)
+    ids = [row.object["id"] for row in rows]
+    assert ids == [0, 1]
+
+
+@pytest.mark.parametrize("strategy", ["subscribe", "assign"])
+def test_retriable_error(base_config, kafka_admin_client, transform_config, producer, strategy):
+    """Test that a retriable error retries processing the message and continues processing further messages"""
+    topic = f"test_retriable_error_{strategy}"
+    config = build_config(base_config, topic, strategy)
+    create_topic(kafka_admin_client, topic)
+    oracle_target, mapping = setup_mapping(config, transform_config)
+
+    produce_default_message(producer, topic, 0)
+    produce_default_message(producer, topic, 1)
+    producer.flush()
+
+    message_mock = MagicMock()
+    error_mock = MagicMock()
+    error_mock.retriable.return_value = True
+    error_mock.fatal.return_value = False
+    message_mock.error.return_value = error_mock
+
+    counter = 0
+    def fake_poll():
+        nonlocal counter
+        counter += 1
+        if counter == 2:
+            return message_mock
+        else:
+            return mapping.source.consumer.poll(timeout=5.0)
+
+    with patch.object(mapping.source, "_poll") as mock_poll:
+        mock_poll.side_effect = fake_poll
+        summary = mapping.run()
+
+    assert summary.event_count == 3
+    assert summary.data_count == 2
+    assert summary.error_count == 1
+    assert summary.written_to_db_count == 2
+    assert summary.empty_count == 0
+    assert summary.non_empty_count == 3
+    assert summary.committed_to_producer_count == (-1 if strategy == "assign" else 2)
+
+    rows = get_kafka_messages(oracle_target, topic)
+    ids = [row.object["id"] for row in rows]
+    assert ids == [0, 1]
+
+
+def test_assign_poll_timeout(base_config, kafka_admin_client, transform_config, producer):
+    """todo: why is there no handling of poll timeout to register an empty event in subscribe mode?"""
+    topic = f"test_assign_poll_timeout"
+    config = build_config(base_config, topic, "assign")
+    create_topic(kafka_admin_client, topic)
+    oracle_target, mapping = setup_mapping(config, transform_config)
+
+    produce_default_message(producer, topic, 0)
+    producer.flush()
+
+    counter = 0
+    def fake_poll():
+        nonlocal counter
+        if counter == 0:
+            counter += 1
+            return None
+        else:
+            return mapping.source.consumer.poll(timeout=5.0)
+
+    with patch.object(mapping.source, "_poll", new=fake_poll):
+        summary = mapping.run()
+
+    assert summary.event_count == 1
+    assert summary.data_count == 1
+    assert summary.error_count == 0
+    assert summary.written_to_db_count == 1
+    assert summary.empty_count == 1
+    assert summary.non_empty_count == 1
+    assert summary.committed_to_producer_count == -1
+
+    rows = get_kafka_messages(oracle_target, topic)
+    assert len(rows) == 1
+

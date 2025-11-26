@@ -85,7 +85,7 @@ def base_config():
     yaml_config = f"""
     source:
       type: kafka
-      batch-size: 1000
+      batch-size: 10
       schema: json
       poll-timeout: 6
     target:  
