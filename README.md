@@ -167,3 +167,21 @@ transform:
   - src: $$$BATCH_TIME
     dst: lastet_dato
 ```
+
+# Database schema
+Måltabellen må ha følgende kolonner:
+```json
+create table raa_my_topic_strom (
+    kafka_key varchar2(200),
+    kafka_offset number(38),
+    kafka_end_offset number(38),
+    kafka_partition number(38),
+    kafka_timestamp timestamp(6),
+    kafka_topic varchar2(200),
+    kafka_schema_id varchar2(200),
+    kafka_hash varchar2(200),
+    kafka_message blob,
+    lastet_tid date,
+    kildesystem varchar2(200)
+)
+```
