@@ -1,28 +1,21 @@
 import hashlib
+import json
+import os
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Callable
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, MagicMock
 
 import pytest
-import os
-from datetime import datetime, timedelta
-import json
-
-from confluent_kafka import KafkaException, Producer, TopicPartition
+from confluent_kafka import Producer
 from confluent_kafka.admin import NewTopic
-from requests.cookies import MockRequest
 
-from src.mapping import Mapping
-from src.oracle_target import OracleTarget
-
-from ..transform import Transform
-from ..mapping import Mapping
 from ..kafka_source import KafkaSource, ProcessSummary
+from ..mapping import Mapping
 from ..oracle_target import OracleTarget
-
-import pyinstrument
+from ..transform import Transform
 
 TABLE_NAME = "RAA_DATA_STROM"
 NOW = datetime(2024, 12, 18, 11, 11, 11)

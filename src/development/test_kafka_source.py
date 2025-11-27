@@ -1,7 +1,6 @@
-import pytest
 import json
 
-from confluent_kafka import Consumer
+import pytest
 from confluent_kafka.admin import NewTopic
 
 from ..kafka_source import KafkaSource

@@ -1,8 +1,6 @@
 import logging
 from datetime import datetime, timezone
 
-from confluent_kafka import KafkaError, TopicPartition
-
 from .config import KafkaConsumerStrategy
 from .kafka_source import KafkaSource, ProcessSummary
 from .oracle_target import OracleTarget

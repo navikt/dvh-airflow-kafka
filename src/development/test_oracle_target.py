@@ -1,12 +1,12 @@
-import pytest
-from datetime import datetime
+import hashlib
 import json
+from datetime import datetime
 
+import pytest
+
+from .conftest import create_table, drop_table, table_insert
 from ..oracle_target import OracleTarget
 from ..transform import Transform
-from ..config import K6Filter
-from .conftest import create_table, drop_table, table_insert
-import hashlib
 
 
 @pytest.fixture(autouse=True, scope="module")

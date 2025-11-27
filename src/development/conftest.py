@@ -1,22 +1,17 @@
 import os
+import uuid
 from time import sleep
 
-import docker
 import pytest
-import json
 import yaml
-from datetime import datetime, timedelta
-import uuid
-
+from confluent_kafka import Consumer, Producer
+from confluent_kafka.admin import AdminClient
 from testcontainers.core import testcontainers_config
 from testcontainers.kafka import KafkaContainer
 from testcontainers.oracle import OracleDbContainer
-from confluent_kafka import Consumer, Producer
-from confluent_kafka.admin import AdminClient, ConfigResource, NewTopic
 
 from .utils.container import get_or_start_container, test_oracle_connection
 from ..oracle_target import OracleTarget
-from ..kafka_source import KafkaSource
 
 os.environ["ENVIRONMENT"] = "LOCAL"
 
