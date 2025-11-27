@@ -1,6 +1,8 @@
 import hashlib
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
+from typing import Callable
 from unittest.mock import patch, Mock, MagicMock
 
 import pytest
@@ -8,7 +10,7 @@ import os
 from datetime import datetime, timedelta
 import json
 
-from confluent_kafka import KafkaException, Producer
+from confluent_kafka import KafkaException, Producer, TopicPartition
 from confluent_kafka.admin import NewTopic
 from requests.cookies import MockRequest
 
@@ -17,7 +19,7 @@ from src.oracle_target import OracleTarget
 
 from ..transform import Transform
 from ..mapping import Mapping
-from ..kafka_source import KafkaSource
+from ..kafka_source import KafkaSource, ProcessSummary
 from ..oracle_target import OracleTarget
 
 import pyinstrument
@@ -321,6 +323,25 @@ def test_filter_field(base_config, kafka_admin_client, transform_config, produce
 
     assert rows[1].object["id"] == 1
 
+@contextmanager
+def mock_poll(source: KafkaSource, poll_fn: Callable, retriable: bool, fatal: bool):
+    message_mock = MagicMock()
+    error_mock = MagicMock()
+    error_mock.retriable.return_value = retriable
+    error_mock.fatal.return_value = fatal
+    message_mock.error.return_value = error_mock
+
+    call_count = -1
+    def poll_wrapper():
+        nonlocal call_count
+        call_count += 1
+        return poll_fn(source, message_mock, error_mock, call_count)
+
+    with patch.object(source, "_poll") as mock_poll:
+        mock_poll.side_effect = poll_wrapper
+        yield
+
+
 @pytest.mark.parametrize("strategy", ["subscribe", "assign"])
 def test_fatal_error(base_config, kafka_admin_client, transform_config, producer, strategy):
     """Test that a fatal error commits processed messages, but no further messages are processed"""
@@ -333,35 +354,42 @@ def test_fatal_error(base_config, kafka_admin_client, transform_config, producer
     produce_default_message(producer, topic, 1)
     producer.flush()
 
-    message_mock = MagicMock()
-    error_mock = MagicMock()
-    error_mock.retriable.return_value = False
-    error_mock.fatal.return_value = True
-    message_mock.error.return_value = error_mock
-
-    counter = 0
-    def fake_poll():
-        nonlocal counter
-        counter += 1
-        if counter == 2:
+    def fake_poll(source, message_mock, error_mock, call_counter):
+        if call_counter == 1:
             return message_mock
         else:
-            return mapping.source.consumer.poll(timeout=5.0)
+            return source.consumer.poll(timeout=5.0)
 
-    with patch.object(mapping.source, "_poll") as mock_poll:
-        mock_poll.side_effect = fake_poll
-        with pytest.raises(KafkaException):
+    with mock_poll(mapping.source, fake_poll, retriable=False, fatal=True):
+        with pytest.raises(RuntimeError) as exc:
             mapping.run()
+
+    assert isinstance(exc.value.args[1], ProcessSummary)
+    summary = exc.value.args[1]
+    assert summary.event_count == 2
+    assert summary.data_count == 1
+    assert summary.error_count == 1
+    assert summary.written_to_db_count == 1
+    assert summary.empty_count == 0
+    assert summary.non_empty_count == 2
+    assert summary.committed_to_producer_count == (-1 if strategy == "assign" else 1)
 
     rows = get_kafka_messages(oracle_target, topic)
     ids = [row.object["id"] for row in rows]
     assert ids == [0]
 
     # process the rest of it
-    mapping.run()
+    summary = mapping.run()
     rows = get_kafka_messages(oracle_target, topic)
     ids = [row.object["id"] for row in rows]
     assert ids == [0, 1]
+    assert summary.event_count == (2 if strategy == "assign" else 1)
+    assert summary.data_count == (2 if strategy == "assign" else 1)
+    assert summary.error_count == 0
+    assert summary.written_to_db_count == (2 if strategy == "assign" else 1)  # OracleTarget does deduplication
+    assert summary.empty_count == 0
+    assert summary.non_empty_count == (2 if strategy == "assign" else 1)
+    assert summary.committed_to_producer_count == (-1 if strategy == "assign" else 1)
 
 
 @pytest.mark.parametrize("strategy", ["subscribe", "assign"])
@@ -376,23 +404,13 @@ def test_retriable_error(base_config, kafka_admin_client, transform_config, prod
     produce_default_message(producer, topic, 1)
     producer.flush()
 
-    message_mock = MagicMock()
-    error_mock = MagicMock()
-    error_mock.retriable.return_value = True
-    error_mock.fatal.return_value = False
-    message_mock.error.return_value = error_mock
-
-    counter = 0
-    def fake_poll():
-        nonlocal counter
-        counter += 1
-        if counter == 2:
+    def fake_poll(source, message_mock, error_mock, call_counter):
+        if call_counter == 0:
             return message_mock
         else:
-            return mapping.source.consumer.poll(timeout=5.0)
+            return source.consumer.poll(timeout=5.0)
 
-    with patch.object(mapping.source, "_poll") as mock_poll:
-        mock_poll.side_effect = fake_poll
+    with mock_poll(mapping.source, fake_poll, retriable=True, fatal=False):
         summary = mapping.run()
 
     assert summary.event_count == 3

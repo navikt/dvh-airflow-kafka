@@ -275,12 +275,15 @@ class KafkaSource(Source):
         """This is only a function to be mocked in tests."""
         return self.consumer.poll(timeout=self.config.poll_timeout)
 
+    def make_consumer(self) -> Consumer:
+        return Consumer(self._kafka_config())
+
     def read_polled_batches(self) -> Generator[Tuple[List[Dict[Text, Any]], ProcessSummary], None, None]:
         """Reads messages from topic beginning (or end) or from custom offsets (silently ignored for non-existing partitions)
 
         Assigns partitions to consumer based on data interval start and end timestamps.
         """
-        self.consumer = Consumer(self._kafka_config())
+        self.consumer = self.make_consumer()
         batch_size = self.config.batch_size
         tp_to_assign_start, tp_to_assign_end = self._data_interval_to_partition_offsets()
         topic_partitions = list(tp_to_assign_start.values())
@@ -353,7 +356,7 @@ class KafkaSource(Source):
                 error_message = f"Bailing out..., no messages read. Processed: {process_summary}"
 
             logging.error(error_message)
-            raise exc
+            raise RuntimeError(error_message, process_summary) from exc
 
         finally:
             self.consumer.close()
@@ -361,7 +364,7 @@ class KafkaSource(Source):
     def read_subscribed_batches(self) -> Generator[Tuple[List[Dict[Text, Any]], ProcessSummary], None, None]:
         """Reads messages from topic by subscribing to it."""
         process_summary = ProcessSummary()
-        self.consumer = Consumer(self._kafka_config())
+        self.consumer = self.make_consumer()
         self.consumer.subscribe([self.config.topic])
         batch = []
         try:
@@ -402,7 +405,7 @@ class KafkaSource(Source):
                 error_message = f"Bailing out..., no messages read. Processed: {process_summary}"
 
             logging.error(error_message)
-            raise exc
+            raise RuntimeError(error_message, process_summary) from exc
         finally:
             if batch:
                 yield batch, process_summary
