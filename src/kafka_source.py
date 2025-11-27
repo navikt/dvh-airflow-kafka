@@ -82,7 +82,7 @@ class KafkaSource(Source):
             raise ValueError(f"Decode: {self.config.key_decoder} not valid. Use utf-8 or int-64")
 
     @staticmethod
-    def clean_config(dictionary: benedict[str, Any], filter_config: list | None, flag_field_config: list | None):
+    def filter_message(dictionary: benedict[str, Any], filter_config: list | None, flag_field_config: list | None):
         if filter_config is not None:
             keypaths = dictionary.keypaths(indexes=True, sort=False)
 
@@ -109,7 +109,7 @@ class KafkaSource(Source):
 
         filter_config = self.config.message_fields_filter
         flag_field_config = self.config.flag_field_config
-        self.clean_config(dictionary, filter_config, flag_field_config)
+        self.filter_message(dictionary, filter_config, flag_field_config)
 
         kafka_hash = hashlib.sha256(message_value).hexdigest()
         kafka_message = json.dumps(dictionary, ensure_ascii=False)
@@ -143,7 +143,7 @@ class KafkaSource(Source):
 
         filter_config = self.config.message_fields_filter
         flag_field_config = self.config.flag_field_config
-        self.clean_config(dictionary, filter_config, flag_field_config)
+        self.filter_message(dictionary, filter_config, flag_field_config)
 
         dictionary["kafka_message"] = json.dumps(dictionary, default=str, ensure_ascii=False)
         dictionary["kafka_schema_id"] = schema_id

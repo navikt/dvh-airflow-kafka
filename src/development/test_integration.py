@@ -216,6 +216,35 @@ def test_incremental_consumption_no_new_messages(base_config, kafka_admin_client
     ids = [row.object["id"] for row in rows]
     assert ids == [0, 1]
 
+def produce_field_test_data(producer, topic):
+    for i in range(2):
+        producer.produce(
+            topic,
+            key=f"key{i}",
+            value=json.dumps(
+                {
+                    "id": i,
+                    "value": f"Message {i}",
+                    "string": "hei",
+                    "nested": {"key": "test"},
+                    "nested2": None,
+                    "nested3": {"key": "test"},
+                    "nested4": [{"index": "test"}],
+                    "nested5": [
+                        {
+                            "key1": "test",
+                        },
+                        {"key2": "test"},
+                        {"key2": None},
+                    ],
+                    "nested6": [{"nested7": [{"key": "val"}]}],
+                }
+            ),  # NB husk å teste med flere felter her
+            partition=i % 2,
+            timestamp=get_kafka_timestamp(i),
+        )
+    producer.flush()
+
 
 @pytest.mark.parametrize("strategy", ["subscribe", "assign"])
 def test_run_assign_flag_field(base_config, kafka_admin_client, transform_config, producer, strategy):
@@ -234,45 +263,61 @@ def test_run_assign_flag_field(base_config, kafka_admin_client, transform_config
     create_topic(kafka_admin_client, topic, num_partitions=2)
     oracle_target, mapping = setup_mapping(config, transform_config)
 
-    for i in range(2):
-        producer.produce(
-            topic,
-            key=f"key{i}",
-            value=json.dumps(
-                {
-                    "id": i,
-                    "value": f"Message {i}",
-                    "string": "hei",
-                    "nested": {"key": "test"},
-                    "nested2": None,
-                    "nested3": {"key": "test"},
-                    "nested4": {"index": "test"},
-                    "nested5": [
-                        {
-                            "key1": "test",
-                        },
-                        {"key2": "test"},
-                        {"key2": None},
-                    ],
-                    "nested6": [{"nested7": [{"key": "val"}]}],
-                }
-            ),  # NB husk å teste med flere felter her
-            partition=i % 2,
-            timestamp=get_kafka_timestamp(i),
-        )
-    producer.flush()
+    produce_field_test_data(producer, topic)
 
     mapping.run()
 
     rows = get_kafka_messages(oracle_target, topic)
     obj = rows[0].object
 
+    assert obj["id"] == 0
+    assert obj["value"] == "Message 0"
+    assert obj["string"] == 1
     assert obj["nested"] == 1
     assert obj["nested2"] == 0
+    assert obj["nested3"]["key"] == 1
+    assert obj["nested4"][0]["index"] == 1
     assert obj["nested5"][0]["key1"] == "test"
     assert obj["nested5"][1]["key2"] == 1
     assert obj["nested5"][2]["key2"] == 0
     assert obj["nested6"][0]["nested7"][0]["key"] == 1
+
+    assert rows[1].object["id"] == 1
+
+@pytest.mark.parametrize("strategy", ["subscribe", "assign"])
+def test_filter_field(base_config, kafka_admin_client, transform_config, producer, strategy):
+    topic = f"test_filter_field_{strategy}"
+    config = build_config(base_config, topic, strategy)
+    config["source"]["message-fields-filter"] = [
+        "string",
+        "nested",
+        "nested2",
+        "nested3/key",
+        "nested4/index",
+        "nested5/key2",
+        "nested6/nested7/key",
+    ]
+    config["source"]["keypath-seperator"] = "/"
+    create_topic(kafka_admin_client, topic, num_partitions=2)
+    oracle_target, mapping = setup_mapping(config, transform_config)
+
+    produce_field_test_data(producer, topic)
+
+    mapping.run()
+
+    rows = get_kafka_messages(oracle_target, topic)
+    obj = rows[0].object
+
+    assert obj["id"] == 0
+    assert obj["value"] == "Message 0"
+    assert "string" not in obj
+    assert "nested" not in obj
+    assert "nested2" not in obj
+    assert "key" not in obj["nested3"]
+    assert "index" not in obj["nested4"][0]
+    assert obj["nested5"][0]["key1"] == "test"
+    assert "key2" not in obj["nested5"][1]
+    assert "key" not in obj["nested6"][0]["nested7"][0]
 
     assert rows[1].object["id"] == 1
 
