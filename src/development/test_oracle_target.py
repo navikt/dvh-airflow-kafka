@@ -1,12 +1,12 @@
-import pytest
-from datetime import datetime
+import hashlib
 import json
+from datetime import datetime
 
+import pytest
+
+from .conftest import create_table, drop_table, table_insert
 from ..oracle_target import OracleTarget
 from ..transform import Transform
-from ..config import K6Filter
-from .conftest import create_table, drop_table, table_insert
-import hashlib
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -116,7 +116,7 @@ def test_write_batch_with_kode67(oracle_target: OracleTarget, transform: Transfo
     oracle_target.write_batch(data, transform)
 
     query_list = ",".join([str(i) for i in kode67_id_list])
-    with oracle_target._oracle_connection() as con:
+    with oracle_target.oracle_connection() as con:
         with con.cursor() as cur:
             table_name = oracle_target.config.table
             cur.execute(
