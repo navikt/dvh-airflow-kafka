@@ -317,9 +317,6 @@ class KafkaSource(Source):
                         assert err_partition is not None, "Partition missing in EOF sentinel object"
                         self._unassign_partition(assigned_partitions, err_topic, err_partition)
 
-                        logging.error(f"Message returned non-critical error: %s", {err})
-                        process_summary.error_count += 1
-
                         # fall through to check if we need to yield batch in case all partitions are done
                     else:
                         logging.error(f"Message returned non-critical error: %s", {err})
@@ -349,9 +346,10 @@ class KafkaSource(Source):
         except Exception as exc:
             process_summary.error_count += 1
             if batch:
-                error_message = f"Bailing out..., after writing all {len(batch)} messages in batch. Processed: {process_summary}"
+                batch_len = len(batch)
                 yield batch, process_summary
-                process_summary.written_to_db_count += len(batch)
+                process_summary.written_to_db_count += batch_len
+                error_message = f"Bailing out..., after writing all {batch_len} messages in batch. Processed: {process_summary}"
             else:
                 error_message = f"Bailing out..., no messages read. Processed: {process_summary}"
 
