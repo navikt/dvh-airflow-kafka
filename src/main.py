@@ -1,3 +1,4 @@
+import json
 import logging
 import traceback
 import os
@@ -6,7 +7,7 @@ import yaml
 
 from .mapping import Mapping
 from .transform import Transform
-from .kafka_source import KafkaSource
+from .kafka_source import KafkaSource, ProcessSummary
 from .oracle_target import OracleTarget
 from .config import set_secrets_as_envs, SecretConfig
 
@@ -36,15 +37,35 @@ def kafka_to_oracle_etl_mapping(config: Text):
     transform = Transform(config["transform"])
     return Mapping(source, target, transform)
 
+def write_to_xcom(process_summary: ProcessSummary) -> None:
+    if os.environ["ENVIRONMENT"] != "LOCAL":
+        with open("/airflow/xcom/return.json", "w") as xcom:
+            xcom.write(
+                json.dumps(dict(
+                    event_count=process_summary.event_count,
+                    data_count=process_summary.data_count,
+                    written_to_db_count=process_summary.written_to_db_count,
+                    committed_to_producer_count=process_summary.committed_to_producer_count,
+                    error_count=process_summary.error_count,
+                    empty_count=process_summary.empty_count,
+                    non_empty_count=process_summary.non_empty_count
+                ))
+            )
 
 def main() -> None:
     """Main consumer thread"""
     try:
         # run_arguments()
-        os.environ["ENVIRONMENT"] = "NOT_LOCAL"
-        kafka_to_oracle_etl_mapping(os.environ["CONSUMER_CONFIG"]).run()
+        if not os.getenv("ENVIRONMENT"):
+            os.environ["ENVIRONMENT"] = "NOT_LOCAL"
+
+        process_summary = kafka_to_oracle_etl_mapping(os.environ["CONSUMER_CONFIG"]).run()
+
+        write_to_xcom(process_summary)
+        if process_summary.error_count > 0 and os.getenv("FAIL_ON_NON_CRITICAL_ERROR", "false").lower() == "true":
+            raise Exception(f"Finished with {process_summary.error_count} non-critical errors")
+
     except Exception as ex:
-        error_text = ""
         if os.getenv("CONSUMER_LOG_LEVEL") == "debug":
             error_text = traceback.format_exc()
         else:

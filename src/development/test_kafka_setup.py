@@ -1,7 +1,6 @@
-import pytest
-import os
 import json
 
+import pytest
 from confluent_kafka.admin import NewTopic
 
 TOPIC_NAME = "kafka-test-topic"
