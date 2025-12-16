@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import sys
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -162,29 +163,39 @@ def test_many_messages(base_config, kafka_admin_client, transform_config, produc
 @pytest.mark.parametrize("strategy", ["subscribe", "assign"])
 def test_incremental_consumption(base_config, kafka_admin_client, transform_config, producer, strategy):
     """Test that running the mapping multiple times only consumes new messages"""
+    print("l1", file=sys.stderr)
     topic = f"test_incremental_consumption_{strategy}"
     config = build_config(base_config, topic, strategy)
     create_topic(kafka_admin_client, topic, num_partitions=2)
     oracle_target, mapping = setup_mapping(config, transform_config)
 
     produce_default_message(producer, topic, 0, partition=0)
+    print("l2", file=sys.stderr)
     produce_default_message(producer, topic, 1, partition=1)
+    print("l3", file=sys.stderr)
     producer.flush()
-
+    print("l4", file=sys.stderr)
     mapping.run()
+    print("l5", file=sys.stderr)
 
     rows = get_kafka_messages(oracle_target, topic)
     ids = [row.object["id"] for row in rows]
     assert ids == [0, 1]
 
+    print("l6", file=sys.stderr)
     produce_default_message(producer, topic, 2, partition=0)
+    print("l7", file=sys.stderr)
     produce_default_message(producer, topic, 3, partition=1)
+    print("l8", file=sys.stderr)
     producer.flush()
+    print("l9", file=sys.stderr)
 
     oracle_target, mapping = setup_mapping(config, transform_config)
     mapping.run()
+    print("l10", file=sys.stderr)
 
     rows = get_kafka_messages(oracle_target, topic)
+    print("l11", file=sys.stderr)
     ids = [row.object["id"] for row in rows]
     assert ids == [0, 1, 2, 3]
 
