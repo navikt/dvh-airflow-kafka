@@ -35,7 +35,6 @@ jobs:
           REF: "${{github.ref}}"
         run: |
           TAG=$(git log -1 --pretty=%ad --date=format:%Y%m%d-%H%M%S)
-          TAG=dev
           branch="$(echo "$REF" | cut -c12-)"
           if [ "$branch" = "main" ]
           then
