@@ -181,6 +181,8 @@ def test_incremental_consumption(base_config, kafka_admin_client, transform_conf
     produce_default_message(producer, topic, 3, partition=1)
     producer.flush()
 
+    time.sleep(1)
+
     mapping.run()
 
     rows = get_kafka_messages(oracle_target, topic)
