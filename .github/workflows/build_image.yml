@@ -11,7 +11,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: write
   contents: read
   id-token: write
   packages: write
@@ -23,11 +22,8 @@ jobs:
     name: "build"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
-        with:
-          config: ${{ vars.PERMISSIONS_CONFIG }}
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: "Add sha to environment variable"
         env:
@@ -44,17 +40,17 @@ jobs:
               echo "IMAGE=$IMAGE_NAME-$safe_branch:$TAG" >> $GITHUB_ENV
           fi
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.1.1
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: .
           push: true
