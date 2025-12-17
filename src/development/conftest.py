@@ -1,37 +1,38 @@
 import os
-import pytest
-import json
-import yaml
-from datetime import datetime, timedelta
 import uuid
+from time import sleep
 
+import pytest
+import yaml
+from confluent_kafka import Consumer, Producer
+from confluent_kafka.admin import AdminClient
+from testcontainers.core import testcontainers_config
 from testcontainers.kafka import KafkaContainer
 from testcontainers.oracle import OracleDbContainer
-from confluent_kafka import Consumer, Producer
-from confluent_kafka.admin import AdminClient, ConfigResource, NewTopic
 
+from .utils.container import get_or_start_container, test_oracle_connection
 from ..oracle_target import OracleTarget
-from ..kafka_source import KafkaSource
 
-kafka = KafkaContainer()
-oracle = OracleDbContainer()
 os.environ["ENVIRONMENT"] = "LOCAL"
+
+# Don't start the supervisor container, because it needs to be privileged. The worst
+# that can happen is that the container will continue running after a crash. This is only an issue
+# when running in a CI environment, and there is a maximum runtime for the tests anyway.
+testcontainers_config.ryuk_disabled = True
 
 
 @pytest.fixture(scope="session", autouse=True)
-def start_broker(request):
-    # Start Kafka container
-    kafka.start()
-
-    def remove_container():
-        kafka.stop()
-
-    request.addfinalizer(remove_container)
+def start_broker():
+    container_name = "testcontainer-dvh-airflow-kafka-broker"
+    kafka = KafkaContainer(name=container_name)
+    kafka.with_bind_ports(9093, ("127.0.0.1", 9093))
+    with get_or_start_container(container_name, kafka):
+        yield kafka
 
 
 @pytest.fixture(scope="session")
-def broker():
-    broker = kafka.get_bootstrap_server()
+def broker(start_broker):
+    broker = "127.0.0.1:9093"
     return broker
 
 
@@ -79,7 +80,7 @@ def base_config():
     yaml_config = f"""
     source:
       type: kafka
-      batch-size: 1000
+      batch-size: 10
       schema: json
       poll-timeout: 6
     target:  
@@ -111,27 +112,36 @@ def transform_config():
 
 
 @pytest.fixture(autouse=True, scope="session")
-def setup_oracle(request):
-    oracle.start()
+def setup_oracle():
+    container_name = "testcontainer-dvh-airflow-kafka-oracle-db"
+    oracle = OracleDbContainer(oracle_password="test", name=container_name, dbname="FREEPDB1")
+    oracle.with_bind_ports(1521, ("127.0.0.1", 1521))
+    with get_or_start_container(container_name, oracle):
 
-    def remove_container():
-        oracle.stop()
+        dsn = "127.0.0.1:1521/FREEPDB1"
+        os.environ["DB_USER"] = "SYSTEM"
+        os.environ["DB_PASSWORD"] = "test"
+        os.environ["DB_DSN"] = dsn
 
-    request.addfinalizer(remove_container)
+        waited = 0
+        while waited < 20:
+            if test_oracle_connection("127.0.0.1", 1521, "FREEPDB1", "system", "test"):
+                break
+            waited += 1
+            sleep(1)
+        else:
+            raise RuntimeError(
+                f"Could not connect to Oracle test container '{container_name}' after waiting {waited}s. "
+                f"Try restarting the test, or deleting the container with `docker container rm -f {container_name}`.")
 
-    url = oracle.get_connection_url()
-    dsn = url.split("@")[1]
-    password = url.split("@")[0].split(":")[-1]
-    os.environ["DB_USER"] = "SYSTEM"
-    os.environ["DB_PASSWORD"] = password
-    os.environ["DB_DSN"] = dsn
+        yield
 
 
 def create_table(table_name, columns):
 
     sql = f"""create table SYSTEM.{table_name} ({",".join(columns)}) """
 
-    with OracleTarget._oracle_connection() as con:
+    with OracleTarget.oracle_connection() as con:
         with con.cursor() as cur:
             cur.execute(sql)
         con.commit()
@@ -140,7 +150,7 @@ def create_table(table_name, columns):
 def drop_table(table_name):
     sql = f"""drop table SYSTEM.{table_name} """
 
-    with OracleTarget._oracle_connection() as con:
+    with OracleTarget.oracle_connection() as con:
         with con.cursor() as cur:
             cur.execute(sql)
         con.commit()
@@ -151,7 +161,7 @@ def table_insert(table_name, data):
     columns = ", ".join(data[0].keys())
     values = ", ".join([f":{key}" for key in data[0].keys()])
     sql = f"INSERT INTO SYSTEM.{table_name} ({columns}) VALUES ({values})"
-    with OracleTarget._oracle_connection() as con:
+    with OracleTarget.oracle_connection() as con:
         with con.cursor() as cur:
             cur.executemany(sql, data)
         con.commit()

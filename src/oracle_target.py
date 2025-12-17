@@ -20,7 +20,7 @@ class OracleTarget(Target):
             os.environ["DATA_INTERVAL_START"] = self.get_latest_timestamp_for_delta()
 
     @staticmethod
-    def _oracle_connection() -> oracledb.Connection:
+    def oracle_connection() -> oracledb.Connection:
         return OracleTarget.connection_class(
             user=os.environ["DB_USER"],
             password=os.environ["DB_PASSWORD"],
@@ -30,7 +30,7 @@ class OracleTarget(Target):
     def get_latest_timestamp_for_delta(self):
         delta_column = self.config.delta["column"]
         delta_table = self.config.delta.get("table") or self.config.table
-        with self._oracle_connection() as con:
+        with self.oracle_connection() as con:
             with con.cursor() as cur:
                 cur.execute(f"select max({delta_column}) from {delta_table}")
                 dt = cur.fetchone()[0]
@@ -75,7 +75,7 @@ class OracleTarget(Target):
                 AND TRUNC(:timestamp) BETWEEN gyldig_fra_dato AND gyldig_til_dato
                 AND skjermet_kode IN(6,7)
             """
-            with self._oracle_connection() as con:
+            with self.oracle_connection() as con:
                 with con.cursor() as cur:
                     return cur.execute(sql, bind_values).fetchall()
         return []
@@ -103,7 +103,7 @@ class OracleTarget(Target):
             sql += f""" and not exists ( select null from {table} where 
             {bind_duplicate_column_names} )"""
 
-        with self._oracle_connection() as con:
+        with self.oracle_connection() as con:
             try:
                 logging.info(f"Starting insert of batch")
                 with con.cursor() as cur:

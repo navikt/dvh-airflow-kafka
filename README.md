@@ -18,6 +18,7 @@ uv run pytest src/development/test_integration.py
 uv run pytest src/development/test_integration.py::test_test_run_subscribe
 ```
 
+Sett miljøvariablen `KEEP_CONTAINERS` til `true` for å beholde containerne etter kjøring av tester. Da kjører testene mye raskere, men man må selv rydde opp i containerne etterpå. Når man omstarter docker/podman, må man selv starte containerne på nytt. Navn på containere er `testcontainer-dvh-airflow-kafka-broker` og `testcontainer-dvh-airflow-kafka-oracle-db`.
 
 ## Bruke kafka-konsument i Airflow
 DVH-AIRFLOW-KAFKA bruker `google secret manager` for å laste inn hemligheter for å koble til et kafka topic og oracle. Du angir navnet på hemlighetene slik at konsumenten kan laste inn hemlighetene som miljøvariabler. Som bruker har du disse mulighetene:
@@ -52,7 +53,20 @@ Dette er miljøvariablene som forventes i TARGET:
 }
 ```
 
-DVH-AIRFLOW-KAFKA forventer en miljøvariabler `CONSUMER_CONFIG` der verdien er en streng på `yaml` format. Det er denne som bestemmer hvor dataen hentes fra, hvordan den transformeres, og hvor den lagres.\
+DVH-AIRFLOW-KAFKA forventer en miljøvariabler `CONSUMER_CONFIG` der verdien er en streng på `yaml` format. Det er denne som bestemmer hvor dataen hentes fra, hvordan den transformeres, og hvor den lagres.
+
+Konsumenten prosesserer alle meldinger i topicet. Dersom en melding feiler under prosessering, vurderes om feilen er kritisk eller ikke kan prøves på nytt. I såfall avsluttes kjøringen. Dersom feilen ikke er kritisk og den kan prøves på nytt, så registreres feilen og prosesseringen fortsetter. Etter endt prosessering skriver konsumenten slike feilmeldinger til loggen og avslutter med suksess (exit kode 0). 
+
+Antall meldinger totalt og antall feil logges til xcom:
+```json
+{
+    "messages": 10000,
+    "errors": 25
+}
+```
+
+
+For å avslutte prosessen med feil (exit kode 1) når det er flere enn én ikke-kritisk feil, sett miljøvariablen `FAIL_ON_NON_CRITICAL_ERROR` til `true`.
 
 Kodeeksempler [dv-a-team-dags/consumer_configs](https://github.com/navikt/dv-a-team-dags/tree/main/consumer_configs)
 
@@ -150,6 +164,22 @@ transform:
     dst: kafka_message
   - src: <kildenavn> # eks $PERMITTERING
     dst: KILDESYSTEM
-  - src: $$$BATCH_TIME
-    dst: lastet_dato
+  - src: $$BATCH_TIME
+    dst: lastet_tid
+```
+
+# Database schema
+Måltabellen må ha følgende kolonner:
+```json
+create table raa_my_topic_strom (
+    kafka_key varchar2(200),
+    kafka_offset number(38),
+    kafka_partition number(38),
+    kafka_timestamp timestamp(6),
+    kafka_topic varchar2(200),
+    kafka_hash varchar2(200),
+    kafka_message blob,
+    kildesystem varchar2(200),
+    lastet_tid timestamp,
+)
 ```

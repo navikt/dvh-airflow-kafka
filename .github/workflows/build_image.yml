@@ -35,12 +35,13 @@ jobs:
           REF: "${{github.ref}}"
         run: |
           TAG=$(git log -1 --pretty=%ad --date=format:%Y%m%d-%H%M%S)
-          branch=$(echo $REF | cut -c12-)
-          if [ $branch = main ]
+          branch="$(echo "$REF" | cut -c12-)"
+          if [ "$branch" = "main" ]
           then
               echo "IMAGE=$IMAGE_NAME:$TAG" >> $GITHUB_ENV
           else 
-              echo "IMAGE=$IMAGE_NAME-$branch:$TAG" >> $GITHUB_ENV
+              safe_branch=$(echo "$branch" | sed 's/[^a-zA-Z0-9._-]/-/g')
+              echo "IMAGE=$IMAGE_NAME-$safe_branch:$TAG" >> $GITHUB_ENV
           fi
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
