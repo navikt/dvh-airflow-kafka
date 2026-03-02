@@ -17,6 +17,11 @@ permissions:
 
 env:
   IMAGE_NAME: "ghcr.io/${{ github.repository }}"
+  TEAM: dv-a-team
+  GAR_TEAM_SERVICE_ACCOUNT: "gar-dv-a-team-79ad@nais-management-233d.iam.gserviceaccount.com"
+  NAIS_WORKLOAD_IDENTITY_PROVIDER: "projects/898056957967/locations/global/workloadIdentityPools/nav-identity-pool/providers/github-oidc-provider"
+
+
 jobs:
   build:
     name: "build"
@@ -39,8 +44,26 @@ jobs:
               safe_branch=$(echo "$branch" | sed 's/[^a-zA-Z0-9._-]/-/g')
               echo "IMAGE=$IMAGE_NAME-$safe_branch:$TAG" >> $GITHUB_ENV
           fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.1.1
+
+      # to fetch the chain guard image from GAR
+      - id: gcloud_auth
+        name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093  # v3.0.0
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ env.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GAR_TEAM_SERVICE_ACCOUNT }}
+
+      # to fetch the chain guard image from GAR
+      - uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        name: Login to Google Artifact Registry
+        with:
+          registry: europe-north1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.gcloud_auth.outputs.access_token }}
 
       - name: Login to GitHub Docker Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
