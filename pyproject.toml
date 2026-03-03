@@ -29,6 +29,12 @@ dev = [
     "pyinstrument>=5.0.3",
 ]
 
+[tool.uv]
+python-downloads = "never"
+package = false
+exclude-newer = "14 days"
+
+
 [tool.ruff]
 include = ["*.py", "*.ipynb"]
 line-length = 120

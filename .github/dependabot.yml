@@ -19,9 +19,12 @@ updates:
     cooldown:
       default-days: 14
     groups:
-      uv:
-        patterns:
-        - '*'
+      uv-version:
+        patterns: ['*']
+        applies-to: "version-updates"
+      uv-security:
+        patterns: ['*']
+        applies-to: "security-updates"
 
   - package-ecosystem: "docker"
     directory: "/"
