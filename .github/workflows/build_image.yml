@@ -17,8 +17,8 @@ permissions:
 
 env:
   IMAGE_NAME: "ghcr.io/${{ github.repository }}"
-  TEAM: dv-a-team
-  GAR_TEAM_SERVICE_ACCOUNT: "gar-dv-a-team-79ad@nais-management-233d.iam.gserviceaccount.com"
+  TEAM: dvh-etl-tools
+  GAR_TEAM_SERVICE_ACCOUNT: "gar-dvh-etl-tools-9f1b@nais-management-233d.iam.gserviceaccount.com"
   NAIS_WORKLOAD_IDENTITY_PROVIDER: "projects/898056957967/locations/global/workloadIdentityPools/nav-identity-pool/providers/github-oidc-provider"
 
 
