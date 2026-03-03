@@ -31,3 +31,10 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
+    groups:
+      docker-version:
+        patterns: ['*']
+        applies-to: "version-updates"
+      docker-security:
+        patterns: ['*']
+        applies-to: "security-updates"
