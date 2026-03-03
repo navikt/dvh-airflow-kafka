@@ -1,5 +1,5 @@
 # Builder stage: install dependencies into a virtual environment
-FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/python:3.13-dev AS builder
+FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/python:3.14-dev AS builder
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -15,7 +15,7 @@ RUN pip install uv && \
     uv sync --locked --no-dev
 
 # App stage: minimal runtime image
-FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/python:3.13
+FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/python:3.14
 
 LABEL org.opencontainers.image.source="https://github.com/navikt/dvh-airflow-kafka"
 
