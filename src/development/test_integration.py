@@ -10,7 +10,7 @@ from typing import Callable
 from unittest.mock import patch, MagicMock
 
 import pytest
-from confluent_kafka import Producer
+from confluent_kafka import Producer, KafkaError, Message, KafkaException
 from confluent_kafka.admin import NewTopic
 
 from ..kafka_source import KafkaSource, ProcessSummary
@@ -86,10 +86,23 @@ def get_kafka_messages(oracle_target, topic) -> list[Row]:
 
 
 def create_topic(kafka_admin_client, topic_name: str, num_partitions: int = 1):
-    futures = kafka_admin_client.create_topics(
-        [NewTopic(topic=topic_name, num_partitions=num_partitions)]
-    )
-    futures[topic_name].result()
+    max_wait_time = 10
+    wait_time = 0.5
+    waited = 0
+    while waited < max_wait_time:
+        try:
+            futures = kafka_admin_client.create_topics(
+                [NewTopic(topic=topic_name, num_partitions=num_partitions)]
+            )
+            futures[topic_name].result()
+            return
+        except KafkaException as e:
+            err: KafkaError = e.args[0]
+            if err.code() == KafkaError.TOPIC_ALREADY_EXISTS and "marked for deletion" in err.str():
+                waited += wait_time
+                continue
+
+            raise
 
 def get_kafka_timestamp(message_offset: int) -> int:
     return int(datetime.timestamp(NOW - timedelta(days=(MAX_NUM_KAFKA_MESSAGES - message_offset - 1))))
@@ -114,8 +127,17 @@ def setup_kafka_for_integration(producer, broker, kafka_admin_client):
         for future in futures.values():
             future.result()
 
-        # future.result() is not enough to wait for deleted topics:(
-        time.sleep(1)
+        # waited = 0
+        # wait_time = 0.5
+        # while waited < 10:
+        #     metadata = kafka_admin_client.list_topics(timeout=wait_time)
+        #     if metadata is None:
+        #         pass
+        #     elif not all(t.startswith("__") for t in metadata.topics.keys()):
+        #         # If there are still non-internal topics, wait some more
+        #         break
+        #
+        #     waited += wait_time
 
 
 @pytest.mark.parametrize("strategy", ["subscribe", "assign"])
@@ -160,42 +182,42 @@ def test_many_messages(base_config, kafka_admin_client, transform_config, produc
         assert rows[i].object["value"] == f"Message {i}"
 
 
+def _run_with_retries(mapping: Mapping, expected_rows: int, retries: int = 3):
+    # Sometimes, the broker seems to have a delay so we don't see the messages right away
+    for _ in range(retries):
+        summary = mapping.run()
+        if summary.data_count == expected_rows:
+            return summary
+
+        time.sleep(1)
+
+
 @pytest.mark.parametrize("strategy", ["subscribe", "assign"])
 def test_incremental_consumption(base_config, kafka_admin_client, transform_config, producer, strategy):
     """Test that running the mapping multiple times only consumes new messages"""
-    print("l1", file=sys.stderr)
     topic = f"test_incremental_consumption_{strategy}"
     config = build_config(base_config, topic, strategy)
     create_topic(kafka_admin_client, topic, num_partitions=2)
     oracle_target, mapping = setup_mapping(config, transform_config)
 
     produce_default_message(producer, topic, 0, partition=0)
-    print("l2", file=sys.stderr)
     produce_default_message(producer, topic, 1, partition=1)
-    print("l3", file=sys.stderr)
     producer.flush()
-    print("l4", file=sys.stderr)
-    mapping.run()
-    print("l5", file=sys.stderr)
+
+    _run_with_retries(mapping, expected_rows=2)
 
     rows = get_kafka_messages(oracle_target, topic)
     ids = [row.object["id"] for row in rows]
     assert ids == [0, 1]
 
-    print("l6", file=sys.stderr)
     produce_default_message(producer, topic, 2, partition=0)
-    print("l7", file=sys.stderr)
     produce_default_message(producer, topic, 3, partition=1)
-    print("l8", file=sys.stderr)
     producer.flush()
-    print("l9", file=sys.stderr)
 
     oracle_target, mapping = setup_mapping(config, transform_config)
-    mapping.run()
-    print("l10", file=sys.stderr)
+    _run_with_retries(mapping, expected_rows=4)
 
     rows = get_kafka_messages(oracle_target, topic)
-    print("l11", file=sys.stderr)
     ids = [row.object["id"] for row in rows]
     assert ids == [0, 1, 2, 3]
 
@@ -211,14 +233,14 @@ def test_incremental_consumption_no_new_messages(base_config, kafka_admin_client
     produce_default_message(producer, topic, 1, partition=1)
     producer.flush()
 
-    mapping.run()
+    _run_with_retries(mapping, expected_rows=2)
 
     rows = get_kafka_messages(oracle_target, topic)
     ids = [row.object["id"] for row in rows]
     assert ids == [0, 1]
 
     oracle_target, mapping = setup_mapping(config, transform_config)
-    mapping.run()
+    _run_with_retries(mapping, expected_rows=2)
 
     rows = get_kafka_messages(oracle_target, topic)
     ids = [row.object["id"] for row in rows]
