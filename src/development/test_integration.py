@@ -127,18 +127,6 @@ def setup_kafka_for_integration(producer, broker, kafka_admin_client):
         for future in futures.values():
             future.result()
 
-        # waited = 0
-        # wait_time = 0.5
-        # while waited < 10:
-        #     metadata = kafka_admin_client.list_topics(timeout=wait_time)
-        #     if metadata is None:
-        #         pass
-        #     elif not all(t.startswith("__") for t in metadata.topics.keys()):
-        #         # If there are still non-internal topics, wait some more
-        #         break
-        #
-        #     waited += wait_time
-
 
 @pytest.mark.parametrize("strategy", ["subscribe", "assign"])
 @pytest.mark.parametrize("batch_size", ["msg_count_lt_batch", "msg_count_eq_batch", "msg_count_gt_batch"])
@@ -182,12 +170,14 @@ def test_many_messages(base_config, kafka_admin_client, transform_config, produc
         assert rows[i].object["value"] == f"Message {i}"
 
 
-def _run_with_retries(mapping: Mapping, expected_rows: int, retries: int = 3):
+def _run_with_retries(mapping: Mapping, expected_rows: int, retries: int = 10):
     # Sometimes, the broker seems to have a delay so we don't see the messages right away
     for _ in range(retries):
         summary = mapping.run()
         if summary.data_count == expected_rows:
             return summary
+
+        print(f"Expected {expected_rows} rows, but got {summary}. Retrying...")
 
         time.sleep(1)
 

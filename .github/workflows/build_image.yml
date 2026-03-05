@@ -6,8 +6,11 @@ on:
     branches:
       - main
       - feat**
-    paths-ignore:
-      - '**.md'
+    paths:
+      - 'src/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'Dockerfile'
   workflow_dispatch:
 
 permissions:
