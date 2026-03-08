@@ -61,7 +61,7 @@ jobs:
           service_account: ${{ env.GAR_TEAM_SERVICE_ACCOUNT }}
 
       # to fetch the chain guard image from GAR
-      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+      - uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         name: Login to Google Artifact Registry
         with:
           registry: europe-north1-docker.pkg.dev
@@ -69,7 +69,7 @@ jobs:
           password: ${{ steps.gcloud_auth.outputs.access_token }}
 
       - name: Login to GitHub Docker Registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
