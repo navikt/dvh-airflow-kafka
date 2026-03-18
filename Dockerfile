@@ -12,7 +12,7 @@ WORKDIR "/app"
 COPY pyproject.toml uv.lock ./
 
 RUN pip install uv && \
-    uv sync --locked --no-dev
+    uv sync --frozen --no-dev
 
 # App stage: minimal runtime image
 FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/python:3.13
