@@ -7,9 +7,18 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
+    cooldown:
+      default-days: 14
     schedule:
       interval: "weekly"
       day: "sunday"
+    groups:
+      gh-version:
+        patterns: ['*']
+        applies-to: "version-updates"
+      gh-security:
+        patterns: ['*']
+        applies-to: "security-updates"
 
   - package-ecosystem: "uv"
     directory: "/"
@@ -31,6 +40,8 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
+    cooldown:
+      default-days: 14
     groups:
       docker-version:
         patterns: ['*']
