@@ -10,9 +10,9 @@ dependencies = [
     "avro>=1.12.0",
     "dateparser>=1.2.0",
     "PyYAML>=6.0",
-    "requests>=2.32.5",
+    "requests>=2.33.0",
     "python-dotenv>=1.1.1",
-    "oracledb>=3.4.0",
+    "oracledb>=3.4.0,<4.0.0",
     "python-benedict>=0.35.0",
     "google-api-python-client>=2.184.0",
     "google-cloud-secret-manager>=2.25.0",
@@ -22,7 +22,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.0",
+    "pytest>=9.0.3",
     "ruff>=0.14.0",
     "python-schema-registry-client>=2.6.1",
     "testcontainers>=4.13.2",
@@ -33,6 +33,12 @@ dev = [
 python-downloads = "never"
 package = false
 
+# Due to vulnerabilities, some dependencies need to be overridden to a specific version.
+# This also might require excluding those dependencies from the dependency cooldown.
+override-dependencies = [
+    "cryptography>=46.0.7",
+    "pygments>=2.20.0",
+]
 
 [tool.ruff]
 include = ["*.py", "*.ipynb"]
