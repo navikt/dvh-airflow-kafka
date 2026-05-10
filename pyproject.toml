@@ -23,7 +23,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
-    "ruff>=0.14.0",
+    "ruff>=0.15.12",
     "python-schema-registry-client>=2.6.1",
     "testcontainers>=4.13.2",
     "pyinstrument>=5.0.3",
