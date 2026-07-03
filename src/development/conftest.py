@@ -1,10 +1,10 @@
 import os
 import uuid
-from time import sleep
+from time import sleep, time
 
 import pytest
 import yaml
-from confluent_kafka import Consumer, Producer
+from confluent_kafka import Consumer, Producer, KafkaException
 from confluent_kafka.admin import AdminClient
 from testcontainers.core import testcontainers_config
 from testcontainers.kafka import KafkaContainer
@@ -20,19 +20,53 @@ os.environ["ENVIRONMENT"] = "LOCAL"
 # when running in a CI environment, and there is a maximum runtime for the tests anyway.
 testcontainers_config.ryuk_disabled = True
 
+# Force the advertised Kafka listener to the IPv4 loopback. Without this, testcontainers
+# resolves the host to "localhost", which the container advertises as its bootstrap/coordinator
+# address. On hosts that prefer IPv6, "localhost" resolves to ::1 first, but the port is only
+# published on 127.0.0.1, so every fresh connection (including to the GroupCoordinator that
+# manages consumer-group offsets) first fails with "Connection refused" over IPv6 before falling
+# back to IPv4. That churn makes offset commit/fetch between runs unreliable and causes flaky
+# message loss. Pinning the advertised host to 127.0.0.1 keeps all client traffic on IPv4.
+testcontainers_config.tc_host_override = "127.0.0.1"
+
 
 @pytest.fixture(scope="session", autouse=True)
 def start_broker():
     container_name = "testcontainer-dvh-airflow-kafka-broker"
-    kafka = KafkaContainer(name=container_name)
+    kafka = KafkaContainer(name=container_name).with_kraft()
+    # kafka = KafkaContainer(name=container_name, image="confluentinc/cp-kafka:7.7.8")
     kafka.with_bind_ports(9093, ("127.0.0.1", 9093))
     with get_or_start_container(container_name, kafka):
         yield kafka
 
 
+def wait_for_broker(bootstrap_servers: str, timeout: int = 30) -> None:
+    """Block until the Kafka broker answers metadata requests.
+
+    The broker accepts TCP connections before it can serve the protocol, so
+    clients created too early get their connection closed mid-handshake
+    (POLLHUP in APIVERSION_QUERY). Probing with the admin client until
+    list_topics succeeds ensures the broker is actually ready.
+    """
+    admin = AdminClient({"bootstrap.servers": bootstrap_servers})
+    deadline = time() + timeout
+    last_error = None
+    while time() < deadline:
+        try:
+            admin.list_topics(timeout=5)
+            return
+        except KafkaException as e:
+            last_error = e
+            sleep(0.5)
+    raise RuntimeError(
+        f"Kafka broker at {bootstrap_servers} not ready after {timeout}s"
+    ) from last_error
+
+
 @pytest.fixture(scope="session")
 def broker(start_broker):
     broker = "127.0.0.1:9093"
+    wait_for_broker(broker)
     return broker
 
 
