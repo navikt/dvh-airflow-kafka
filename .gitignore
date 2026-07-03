@@ -2,3 +2,5 @@ __pycache__
 .vscode
 .DS_Store
 .idea
+
+*.egg-info

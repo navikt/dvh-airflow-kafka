@@ -1,0 +1,16 @@
+apiVersion: nais.io/v1
+kind: Naisjob
+metadata:
+  labels:
+    team: "{{ team }}"
+  name: "image-{{ image_name }}"
+  namespace: "{{ team }}"
+spec:
+  # no schedule, runs once
+  image: "{{ image }}"
+  backoffLimit: 0
+  # Startup and exit. This job is never used, except for building the image and tracing vulnerabilities
+  command:
+    - "python3"
+    - "-c"
+    - "print('Completed')"
