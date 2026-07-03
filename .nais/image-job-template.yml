@@ -2,9 +2,9 @@ apiVersion: nais.io/v1
 kind: Naisjob
 metadata:
   labels:
-    team: "{{ team }}"
-  name: "image-{{ image_name }}"
-  namespace: "{{ team }}"
+    team: dvh-etl-tools
+  name: image-dvh-airflow-kafka
+  namespace: dvh-etl-tools
 spec:
   # no schedule, runs once
   image: "{{ image }}"
