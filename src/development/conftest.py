@@ -35,7 +35,7 @@ def start_broker():
     container_name = "testcontainer-dvh-airflow-kafka-broker"
     kafka = KafkaContainer(name=container_name).with_kraft()
     # kafka = KafkaContainer(name=container_name, image="confluentinc/cp-kafka:7.7.8")
-    kafka.with_bind_ports(9093, ("127.0.0.1", 9093))
+    kafka.with_bind_ports(9093, 9093)
     with get_or_start_container(container_name, kafka):
         yield kafka
 
@@ -149,7 +149,7 @@ def transform_config():
 def setup_oracle():
     container_name = "testcontainer-dvh-airflow-kafka-oracle-db"
     oracle = OracleDbContainer(oracle_password="test", name=container_name, dbname="FREEPDB1")
-    oracle.with_bind_ports(1521, ("127.0.0.1", 1521))
+    oracle.with_bind_ports(1521, 1521)
     with get_or_start_container(container_name, oracle):
 
         dsn = "127.0.0.1:1521/FREEPDB1"
