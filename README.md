@@ -183,3 +183,102 @@ create table raa_my_topic_strom (
     lastet_tid timestamp,
 )
 ```
+
+
+# Kafka-utviklings-CLI
+
+CLI-et kan brukes til å hente meldinger, inspisere consumer group-offsets og finne eller endre offsets uten å kjøre 
+ETL-jobben. Det henter Kafka-legitimasjonen fra Google Secret Manager (GSM), og kildekonfigurasjonen fra en lokal 
+JSON- eller YAML-fil.
+
+Lokal kjøring krever tilgang til GSM via Application Default Credentials og tillatelse til å lese den aktuelle 
+hemmeligheten. Secret resource name må inkludere versjon, for eksempel 
+`projects/my-project/secrets/kafka-credentials/versions/latest`. Hemmelighetens verdi skal være et JSON-objekt med 
+Kafka-miljøvariabler som `KAFKA_BROKERS`, `KAFKA_CERTIFICATE`, `KAFKA_PRIVATE_KEY` og `KAFKA_CA`. For Avro kreves 
+også `KAFKA_SCHEMA_REGISTRY`, `KAFKA_SCHEMA_REGISTRY_USER` og `KAFKA_SCHEMA_REGISTRY_PASSWORD`.
+
+Angi secret resource name med `--project-secret-path` eller miljøvariabelen `PROJECT_SECRET_PATH`. 
+Konfigurasjonsfilen angis med `--config` eller `KAFKA_CONFIG_PATH`. Filen kan være den vanlige YAML-konfigurasjonen 
+med en `source:`-seksjon, eller bare kildekonfigurasjonen. Den må inneholde blant annet `type`, `batch-size`, 
+`topic`, `group-id` og `schema`.
+
+Eksempel på en kildekonfigurasjon yaml fil:
+
+```yaml
+type: kafka
+batch-size: 100
+topic: topic-navn
+group-id: min-consumer-group
+schema: json
+```
+
+Sett variablene én gang, og kjør deretter kommandoene fra repository-roten.
+
+Bruk `jq` for å formatere JSON-linjer.
+
+```bash
+export PROJECT_SECRET_PATH="projects/my-project/secrets/kafka-credentials/versions/latest"
+export KAFKA_CONFIG_PATH="/home/user/my_project/source.yaml"
+
+# Hent én melding. Offset må kombineres med én partisjon.
+uv run python -m src.kafka_cli fetch --partition 0 --offset 123 | jq
+
+# Hent offset-intervallet [123, 150): slutt-offseten er eksklusiv.
+uv run python -m src.kafka_cli fetch --partition 0 --start-offset 123 --end-offset 150 | jq
+
+# Hent meldinger i et tidsintervall med tidssone fra alle partisjoner.
+uv run python -m src.kafka_cli fetch --start-time "2026-10-07T08:00:00+02:00" --end-time "2026-10-07T09:00:00+02:00" --limit 1000 | jq
+
+# Vis lagrede offsets, vannmerker og estimert etterslep for consumer group.
+uv run python -m src.kafka_cli offsets | jq
+
+# Finn offset-grenser som inneholder tidsintervallet.
+uv run python -m src.kafka_cli offsets-for-times --start-time "2026-10-07T08:00:00+02:00" --end-time "2026-10-07T09:00:00+02:00" | jq
+
+# Forhåndsvis ny offset (gjør ingen endringer uten --execute).
+uv run python -m src.kafka_cli set-offset --partition 0 --offset 123 | jq
+
+# Endre offset etter at gruppens konsumenter er stoppet.
+uv run python -m src.kafka_cli set-offset --partition 0 --offset 123 --execute | jq
+```
+
+Alternativt kan ressursnavnet sendes direkte i CLI-et:
+
+```bash
+uv run python -m src.kafka_cli \
+    --project-secret-path "projects/my-project/secrets/kafka-credentials/versions/latest" \
+    --config "/home/user/my_project/source.yaml" \
+    offsets | jq
+```
+
+Tidsflaggene godtar Unix-tid i millisekunder eller ISO-8601 med tidssone, for eksempel `2026-10-07T08:00:00Z` for UTC eller `2026-10-07T08:00:00+02:00` for en tidssone med forskyvning på +02:00. ISO-8601 uten tidssone godtas ikke. Tidsintervaller er halvåpne: starttidspunktet er inkludert og sluttidspunktet er
+ekskludert. `fetch` leser direkte fra partisjonene, bruker ikke consumer groupens lagrede posisjon og committer ikke 
+offsets. Resultatene skrives som JSON-linjer til stdout; logger skrives til stderr. Meldingsverdiene dekodes etter 
+`schema`-innstillingen, men det anvendes ingen filtrering hvis det er konfigurert til produksjonsbruk.
+
+`set-offset` endrer denne lagrede posisjonen, ikke posisjonen til en allerede kjørende konsument. `--execute` krever at gruppen er 
+inaktiv; hold den stoppet til den tiltenkte konsumenten startes igjen. `--partition` kan gjentas for å velge flere 
+partisjoner og gjelder alle kommandoene; uten flagget velges alle partisjoner. 
+
+`fetch` har standardgrense på 100 meldinger og logger en advarsel dersom grensen nås.
+
+`offsets` viser committed offset, som er posisjonen neste konsument i gruppen vil lese fra. 
+
+Eksempel for `offsets` kommandoen:
+```json
+{
+  "topic": "paw.arbeidssokerperioder-v1",
+  "partition": 0,
+  "group_id": "dvh_arb_reg_periode_konsument",
+  "committed_offset": 8161,
+  "earliest_offset": 0,
+  "end_offset": 8169,
+  "lag": 8,
+  "timestamp_committed_offset": "2026-10-15 09:51:03.995000+00:00",
+  "timestamp_earliest_offset": "2024-03-21 09:49:47.955000+00:00",
+  "last_message": {
+    "offset": 8167,
+    "timestamp": "2026-10-16T07:23:27.751000+00:00"
+  }
+}
+```

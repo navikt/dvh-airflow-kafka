@@ -154,9 +154,11 @@ class KafkaSource(Source):
         schema_registry = os.environ["KAFKA_SCHEMA_REGISTRY"]
         un = os.environ["KAFKA_SCHEMA_REGISTRY_USER"]
         pw = os.environ["KAFKA_SCHEMA_REGISTRY_PASSWORD"]
-        json_string = requests.get(
+        response = requests.get(
             f"{schema_registry}/schemas/ids/{schema_id}", auth=(un, pw)
-        ).json()["schema"]
+        )
+        response.raise_for_status()
+        json_string = response.json()["schema"]
         reader_schema = avro.schema.parse(json_string)
         return avro.io.DatumReader(reader_schema)
 

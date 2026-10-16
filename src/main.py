@@ -2,6 +2,7 @@ import json
 import logging
 import traceback
 import os
+from pathlib import Path
 from typing import Text
 import yaml
 
@@ -59,7 +60,12 @@ def main() -> None:
         if not os.getenv("ENVIRONMENT"):
             os.environ["ENVIRONMENT"] = "NOT_LOCAL"
 
-        process_summary = kafka_to_oracle_etl_mapping(os.environ["CONSUMER_CONFIG"]).run()
+        if "CONSUMER_CONFIG_PATH" in os.environ:
+            consumer_config = Path(os.environ["CONSUMER_CONFIG_PATH"]).read_text(encoding="utf-8")
+        else:
+            consumer_config = os.environ["CONSUMER_CONFIG"]
+
+        process_summary = kafka_to_oracle_etl_mapping(consumer_config).run()
 
         write_to_xcom(process_summary)
         if process_summary.error_count > 0 and os.getenv("FAIL_ON_NON_CRITICAL_ERROR", "false").lower() == "true":

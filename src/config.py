@@ -9,8 +9,10 @@ from google.cloud import secretmanager
 
 def set_secrets_as_envs():
     # Set the default resource name if PROJECT_SECRET_PATH is not provided
-    default_resource_name = f"{os.environ['KNADA_TEAM_SECRET']}/versions/latest"
-    resource_name = os.environ.get("PROJECT_SECRET_PATH", default_resource_name)
+    if "PROJECT_SECRET_PATH" not in os.environ:
+        resource_name = f"{os.environ['KNADA_TEAM_SECRET']}/versions/latest"
+    else:
+        resource_name = os.environ["PROJECT_SECRET_PATH"]
 
     secret_client = secretmanager.SecretManagerServiceClient()
     secret_version = secret_client.access_secret_version(name=resource_name)
