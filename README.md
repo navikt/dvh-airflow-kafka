@@ -4,7 +4,16 @@ dvh-airflow-kafka kan benyttes for å konsumere data fra kafka-topics i Aiven og
 
 Følg denne [guiden](kafka-topic.md) for å opprette en NAIS applikasjon som har tilgang til ønsket topic.
 
-## Lokal utvikling - kjøre tester
+# Lokal utvikling
+Opprett utviklingsmiljøet:
+
+```bash
+git clone ...
+cd dvh_ariflow_kafka
+uv sync
+```
+
+## Kjøre tester
 
 Krever at [Docker desktop](https://www.docker.com/products/docker-desktop/) (Krever lisen) og [uv](https://docs.astral.sh/uv/getting-started/installation/) er installert. \
 [Podman](https://podman-desktop.io/tutorial/testcontainers-with-podman) er et godt alternativ til Docker Desktop.
@@ -19,6 +28,34 @@ uv run pytest src/development/test_integration.py::test_test_run_subscribe
 ```
 
 Sett miljøvariablen `KEEP_CONTAINERS` til `true` for å beholde containerne etter kjøring av tester. Da kjører testene mye raskere, men man må selv rydde opp i containerne etterpå. Når man omstarter docker/podman, må man selv starte containerne på nytt. Navn på containere er `testcontainer-dvh-airflow-kafka-broker` og `testcontainer-dvh-airflow-kafka-oracle-db`.
+
+## Kjøre i KNAST
+
+I KNAST konfigurasjon, åpne opp brannmuren for databasen og aiven/kafka. Din bruker trenger tilgang til kafka hemmeligheten i Google Secret Manager og proxytilgang til databaseskjemaet.
+
+Skriv konsumentkonfigurasjonen til en sti på disken, ref. dokumentasjon om kjøring i airflow.
+
+```bash
+# Konsumentkonfigurasjon
+export CONSUMER_CONFIG_PATH="/path/to/consumer_config.yml"
+# GSM hemmelighet med kafka konfigurasjon
+export SOURCE_SECRET_PATH="projects/{PROJECT_ID}/secrets/{KAFKA_SECRET_NAME}/versions/latest"
+# GSM hemmelighet med db konfigurasjon
+export TARGET_SECRET_PATH="projects/{PROJECT_ID}/secrets/{DB_SECRET_NAME}/versions/latest"
+# Vi kjører ikke i airflow
+export ENVIRONMENT="LOCAL"
+# Overskriv DB_USER from DB_SECRET_NAME - da hentes passordet fra en terminal prompt
+export DB_USER="{IDENT}[{SCHEMA}]"
+# Skriv XCOM til denne filen, sett den til en tom streng dersom den ikke skal skrives
+export XCOM_TARGET_PATH="xcom.json"
+```
+
+For å forenkle utviklingen, skriv alle export uttrykk til `env.sh` og kjør `source env.sh` for å sette de.
+
+Kjør skriptet med:
+```bash
+uv run python -m src.main
+```
 
 ## Bruke kafka-konsument i Airflow
 DVH-AIRFLOW-KAFKA bruker `google secret manager` for å laste inn hemligheter for å koble til et kafka topic og oracle. Du angir navnet på hemlighetene slik at konsumenten kan laste inn hemlighetene som miljøvariabler. Som bruker har du disse mulighetene:
@@ -53,15 +90,20 @@ Dette er miljøvariablene som forventes i TARGET:
 }
 ```
 
-DVH-AIRFLOW-KAFKA forventer en miljøvariabler `CONSUMER_CONFIG` der verdien er en streng på `yaml` format. Det er denne som bestemmer hvor dataen hentes fra, hvordan den transformeres, og hvor den lagres.
+DVH-AIRFLOW-KAFKA forventer en miljøvariabler `CONSUMER_CONFIG` der verdien er en streng på `yaml` format. Det er denne som bestemmer hvor dataen hentes fra, hvordan den transformeres, og hvor den lagres. Alternativ kan den spesifiseres som fil med stien in `CONSUMER_CONFIG_PATH`.
 
 Konsumenten prosesserer alle meldinger i topicet. Dersom en melding feiler under prosessering, vurderes om feilen er kritisk eller ikke kan prøves på nytt. I såfall avsluttes kjøringen. Dersom feilen ikke er kritisk og den kan prøves på nytt, så registreres feilen og prosesseringen fortsetter. Etter endt prosessering skriver konsumenten slike feilmeldinger til loggen og avslutter med suksess (exit kode 0).
 
-Antall meldinger totalt og antall feil logges til xcom:
+Informasjon om kjøringen logges til xcom (`/airflow/xcom/return.json`, or `XCOM_TARGET_PATH`):
 ```json
 {
-    "messages": 10000,
-    "errors": 25
+    "event_count": ...,
+    "data_count": ...,
+    "written_to_db_count": ...,
+    "committed_to_producer_count": ...,
+    "error_count": ...,
+    "empty_count": ...,
+    "non_empty_count": ...
 }
 ```
 
