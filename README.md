@@ -55,7 +55,7 @@ Dette er miljøvariablene som forventes i TARGET:
 
 DVH-AIRFLOW-KAFKA forventer en miljøvariabler `CONSUMER_CONFIG` der verdien er en streng på `yaml` format. Det er denne som bestemmer hvor dataen hentes fra, hvordan den transformeres, og hvor den lagres.
 
-Konsumenten prosesserer alle meldinger i topicet. Dersom en melding feiler under prosessering, vurderes om feilen er kritisk eller ikke kan prøves på nytt. I såfall avsluttes kjøringen. Dersom feilen ikke er kritisk og den kan prøves på nytt, så registreres feilen og prosesseringen fortsetter. Etter endt prosessering skriver konsumenten slike feilmeldinger til loggen og avslutter med suksess (exit kode 0). 
+Konsumenten prosesserer alle meldinger i topicet. Dersom en melding feiler under prosessering, vurderes om feilen er kritisk eller ikke kan prøves på nytt. I såfall avsluttes kjøringen. Dersom feilen ikke er kritisk og den kan prøves på nytt, så registreres feilen og prosesseringen fortsetter. Etter endt prosessering skriver konsumenten slike feilmeldinger til loggen og avslutter med suksess (exit kode 0).
 
 Antall meldinger totalt og antall feil logges til xcom:
 ```json
@@ -72,7 +72,7 @@ Kodeeksempler [dv-a-team-dags/consumer_configs](https://github.com/navikt/dv-a-t
 
 Eksempel config:
 ```yaml
-# Kildekonfigurasjon. 
+# Kildekonfigurasjon.
 source:
   # Kun kafka er støttet for øyeblikket
   type: kafka
@@ -109,7 +109,7 @@ source:
   - key: <nytt eller samme feltnavn-kafka-message>
     allowed_value: <verdinavn du vil beholde>
     ...
-    
+
 # Mål
 target:
   # Kun Oracle er støttet for øyeblikket
@@ -130,7 +130,7 @@ target:
   # Måltabell
   table: <target-table-name>
   # Hvis du ønsker å filtrere duplikater fra kilde. Tar en liste med en eller flere kolonner.
-  skip-duplicates-with: 
+  skip-duplicates-with:
     # Hvilke kolonner som til sammen skal være unike.
     - kafka_partition
     - kafka_offset
@@ -187,19 +187,19 @@ create table raa_my_topic_strom (
 
 # Kafka-utviklings-CLI
 
-CLI-et kan brukes til å hente meldinger, inspisere consumer group-offsets og finne eller endre offsets uten å kjøre 
-ETL-jobben. Det henter Kafka-legitimasjonen fra Google Secret Manager (GSM), og kildekonfigurasjonen fra en lokal 
+CLI-et kan brukes til å hente meldinger, inspisere consumer group-offsets og finne eller endre offsets uten å kjøre
+ETL-jobben. Det henter Kafka-legitimasjonen fra Google Secret Manager (GSM), og kildekonfigurasjonen fra en lokal
 JSON- eller YAML-fil.
 
-Lokal kjøring krever tilgang til GSM via Application Default Credentials og tillatelse til å lese den aktuelle 
-hemmeligheten. Secret resource name må inkludere versjon, for eksempel 
-`projects/my-project/secrets/kafka-credentials/versions/latest`. Hemmelighetens verdi skal være et JSON-objekt med 
-Kafka-miljøvariabler som `KAFKA_BROKERS`, `KAFKA_CERTIFICATE`, `KAFKA_PRIVATE_KEY` og `KAFKA_CA`. For Avro kreves 
+Lokal kjøring krever tilgang til GSM via Application Default Credentials og tillatelse til å lese den aktuelle
+hemmeligheten. Secret resource name må inkludere versjon, for eksempel
+`projects/my-project/secrets/kafka-credentials/versions/latest`. Hemmelighetens verdi skal være et JSON-objekt med
+Kafka-miljøvariabler som `KAFKA_BROKERS`, `KAFKA_CERTIFICATE`, `KAFKA_PRIVATE_KEY` og `KAFKA_CA`. For Avro kreves
 også `KAFKA_SCHEMA_REGISTRY`, `KAFKA_SCHEMA_REGISTRY_USER` og `KAFKA_SCHEMA_REGISTRY_PASSWORD`.
 
-Angi secret resource name med `--project-secret-path` eller miljøvariabelen `PROJECT_SECRET_PATH`. 
-Konfigurasjonsfilen angis med `--config` eller `KAFKA_CONFIG_PATH`. Filen kan være den vanlige YAML-konfigurasjonen 
-med en `source:`-seksjon, eller bare kildekonfigurasjonen. Den må inneholde blant annet `type`, `batch-size`, 
+Angi secret resource name med `--project-secret-path` eller miljøvariabelen `PROJECT_SECRET_PATH`.
+Konfigurasjonsfilen angis med `--config` eller `CONSUMER_CONFIG_PATH`. Filen kan være den vanlige YAML-konfigurasjonen
+med en `source:`-seksjon, eller bare kildekonfigurasjonen. Den må inneholde blant annet `type`, `batch-size`,
 `topic`, `group-id` og `schema`.
 
 Eksempel på en kildekonfigurasjon yaml fil:
@@ -218,7 +218,8 @@ Bruk `jq` for å formatere JSON-linjer.
 
 ```bash
 export PROJECT_SECRET_PATH="projects/my-project/secrets/kafka-credentials/versions/latest"
-export KAFKA_CONFIG_PATH="/home/user/my_project/source.yaml"
+export CONSUMER_CONFIG_PATH="/home/user/my_project/source.yaml"
+export PYTHON_PATH=$(pwd):$PYTHON_PATH
 
 # Hent én melding. Offset må kombineres med én partisjon.
 uv run python -m src.kafka_cli fetch --partition 0 --offset 123 | jq
@@ -252,17 +253,17 @@ uv run python -m src.kafka_cli \
 ```
 
 Tidsflaggene godtar Unix-tid i millisekunder eller ISO-8601 med tidssone, for eksempel `2026-10-07T08:00:00Z` for UTC eller `2026-10-07T08:00:00+02:00` for en tidssone med forskyvning på +02:00. ISO-8601 uten tidssone godtas ikke. Tidsintervaller er halvåpne: starttidspunktet er inkludert og sluttidspunktet er
-ekskludert. `fetch` leser direkte fra partisjonene, bruker ikke consumer groupens lagrede posisjon og committer ikke 
-offsets. Resultatene skrives som JSON-linjer til stdout; logger skrives til stderr. Meldingsverdiene dekodes etter 
+ekskludert. `fetch` leser direkte fra partisjonene, bruker ikke consumer groupens lagrede posisjon og committer ikke
+offsets. Resultatene skrives som JSON-linjer til stdout; logger skrives til stderr. Meldingsverdiene dekodes etter
 `schema`-innstillingen, men det anvendes ingen filtrering hvis det er konfigurert til produksjonsbruk.
 
-`set-offset` endrer denne lagrede posisjonen, ikke posisjonen til en allerede kjørende konsument. `--execute` krever at gruppen er 
-inaktiv; hold den stoppet til den tiltenkte konsumenten startes igjen. `--partition` kan gjentas for å velge flere 
-partisjoner og gjelder alle kommandoene; uten flagget velges alle partisjoner. 
+`set-offset` endrer denne lagrede posisjonen, ikke posisjonen til en allerede kjørende konsument. `--execute` krever at gruppen er
+inaktiv; hold den stoppet til den tiltenkte konsumenten startes igjen. `--partition` kan gjentas for å velge flere
+partisjoner og gjelder alle kommandoene; uten flagget velges alle partisjoner.
 
 `fetch` har standardgrense på 100 meldinger og logger en advarsel dersom grensen nås.
 
-`offsets` viser committed offset, som er posisjonen neste konsument i gruppen vil lese fra. 
+`offsets` viser committed offset, som er posisjonen neste konsument i gruppen vil lese fra.
 
 Eksempel for `offsets` kommandoen:
 ```json

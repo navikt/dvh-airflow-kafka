@@ -719,8 +719,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--config",
-        default=os.environ.get("KAFKA_CONFIG_PATH"),
-        help="SourceConfig JSON/YAML file; defaults to KAFKA_CONFIG_PATH.",
+        default=os.environ.get("CONSUMER_CONFIG_PATH"),
+        help="SourceConfig JSON/YAML file; defaults to CONSUMER_CONFIG_PATH.",
     )
     parser.add_argument(
         "--timeout",
@@ -879,7 +879,7 @@ def validate_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace
     if not args.project_secret_path or not args.config:
         parser.error(
             "Provide --project-secret-path and --config, or set "
-            "PROJECT_SECRET_PATH and KAFKA_CONFIG_PATH."
+            "PROJECT_SECRET_PATH and CONSUMER_CONFIG_PATH."
         )
 
     if args.command == "fetch":
