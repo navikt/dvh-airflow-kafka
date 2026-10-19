@@ -170,7 +170,7 @@ class KafkaSource(Source):
             "group.id": self.config.group_id,
         }
 
-        if os.environ.get("ENVIRONMENT", "NOT_LOCAL") != "LOCAL":
+        if os.environ.get("ENVIRONMENT", "NOT_LOCAL") != "TEST":
             config.update(
                 {
                     "ssl.certificate.pem": os.environ["KAFKA_CERTIFICATE"],

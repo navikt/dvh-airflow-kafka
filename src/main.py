@@ -39,8 +39,9 @@ def kafka_to_oracle_etl_mapping(config: Text):
     return Mapping(source, target, transform)
 
 def write_to_xcom(process_summary: ProcessSummary) -> None:
-    if os.environ["ENVIRONMENT"] != "LOCAL":
-        with open("/airflow/xcom/return.json", "w") as xcom:
+    if os.environ["ENVIRONMENT"] != "TEST":
+        target_path = os.environ.get("XCOM_TARGET_PATH", "/airflow/xcom/return.json")
+        with open(target_path, "w") as xcom:
             xcom.write(
                 json.dumps(dict(
                     event_count=process_summary.event_count,

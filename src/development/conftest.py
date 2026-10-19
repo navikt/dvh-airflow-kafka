@@ -13,7 +13,7 @@ from testcontainers.oracle import OracleDbContainer
 from .utils.container import get_or_start_container, test_oracle_connection
 from ..oracle_target import OracleTarget
 
-os.environ["ENVIRONMENT"] = "LOCAL"
+os.environ["ENVIRONMENT"] = "TEST"
 
 # Don't start the supervisor container, because it needs to be privileged. The worst
 # that can happen is that the container will continue running after a crash. This is only an issue
@@ -117,9 +117,9 @@ def base_config():
       batch-size: 10
       schema: json
       poll-timeout: 6
-    target:  
+    target:
       type: oracle
-      skip-duplicates-with: 
+      skip-duplicates-with:
         - kafka_hash
     """
     return yaml.safe_load(stream=yaml_config)
