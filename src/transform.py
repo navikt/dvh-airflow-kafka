@@ -60,6 +60,17 @@ def str_to_date(x: Optional[Text]) -> Optional[datetime]:
     return _adjust_timezone(y)
 
 
+def str_to_byte_utf8(x: Optional[Text]) -> Optional[datetime]:
+    """
+    fun: str -> byte-utf8
+
+    Converts string to byte using utf-8 encoding.
+    """
+    if x is None:
+        return None
+    return x.encode("utf-8")
+
+
 def int_s_to_date(x: Optional[Union[int, float]]) -> Optional[datetime]:
     """
     fun: int-unix-s -> datetime-no
@@ -112,6 +123,7 @@ def datetime_to_datetime_no(x: Optional[datetime]) -> Optional[datetime]:
 TRANSFORMS = {
     "str -> str-code": str_to_code,
     "str -> datetime-no": str_to_date,
+    "str -> byte-utf8": str_to_byte_utf8,
     "int-unix-s -> datetime-no": int_s_to_date,
     "int-unix-ms -> datetime-no": int_ms_to_date,
     "bool -> int": bool_to_int,
