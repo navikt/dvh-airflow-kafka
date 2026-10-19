@@ -21,10 +21,14 @@ class OracleTarget(Target):
 
     @staticmethod
     def oracle_connection() -> oracledb.Connection:
+        user = os.environ["DB_USER"]
+        dsn = os.environ["DB_DSN"]
+        host_config = dsn.split("@")[-1]
+        logging.info(f"Connecting to {host_config} as {user}")
         return OracleTarget.connection_class(
-            user=os.environ["DB_USER"],
+            user=user,
             password=os.environ["DB_PASSWORD"],
-            dsn=os.environ["DB_DSN"],
+            dsn=dsn,
         )
 
     def get_latest_timestamp_for_delta(self):
@@ -68,6 +72,11 @@ class OracleTarget(Target):
             bind_values = dict(zip(sequential_bind_variable_names, person_identer))
             bind_values.update({"timestamp": timestamp})
 
+            if not oracledb.is_simple_sql_name(k6_conf.filter_col):
+                raise ValueError(f"{k6_conf.filter_col} is not a valid unquoted SQL identifier")
+            if not oracledb.is_simple_sql_name(k6_conf.filter_table):
+                raise ValueError(f"{k6_conf.filter_table} is not a valid unquoted SQL identifier")
+
             sql = f"""
                 SELECT {k6_conf.filter_col}
                 FROM {k6_conf.filter_table}
@@ -94,18 +103,21 @@ class OracleTarget(Target):
 
         batch = list(map(transform, batch))
         columns = list(batch[0].keys())
+        for column in columns:
+            if not oracledb.is_simple_sql_name(column):
+                raise ValueError(f"{column} is not a valid unqoted SQL identifier")
         sql = f"insert into {table} ({','.join(columns)}) select :{',:'.join(columns)} from dual where 1=1"
 
         duplicate_column = self.config.skip_duplicates_with
         if duplicate_column:
             duplicate_columns = [f"{item}=:{item}" for item in duplicate_column]
             bind_duplicate_column_names = " and ".join(duplicate_columns)
-            sql += f""" and not exists ( select null from {table} where 
+            sql += f""" and not exists ( select null from {table} where
             {bind_duplicate_column_names} )"""
 
         with self.oracle_connection() as con:
             try:
-                logging.info(f"Starting insert of batch")
+                logging.info(f"Starting insert of batch with {len(batch)} records")
                 with con.cursor() as cur:
                     cur.setinputsizes(
                         **self.get_kv_from_config_by_method("oracledb.Cursor.setinputsizes")

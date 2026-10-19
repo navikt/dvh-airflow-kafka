@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 from enum import StrEnum
 from typing import Optional
 
@@ -9,8 +10,10 @@ from google.cloud import secretmanager
 
 def set_secrets_as_envs():
     # Set the default resource name if PROJECT_SECRET_PATH is not provided
-    default_resource_name = f"{os.environ['KNADA_TEAM_SECRET']}/versions/latest"
-    resource_name = os.environ.get("PROJECT_SECRET_PATH", default_resource_name)
+    if "PROJECT_SECRET_PATH" not in os.environ:
+        resource_name = f"{os.environ['KNADA_TEAM_SECRET']}/versions/latest"
+    else:
+        resource_name = os.environ["PROJECT_SECRET_PATH"]
 
     secret_client = secretmanager.SecretManagerServiceClient()
     secret_version = secret_client.access_secret_version(name=resource_name)
@@ -37,8 +40,16 @@ class SecretConfig:
         os.environ.update(secret_dict)
 
     def load_secrets_to_env(self):
+        user_override = os.environ.get("DB_USER")
         self._set_secret_as_env(secret_name=self.source_secret_path)
         self._set_secret_as_env(secret_name=self.target_secret_path)
+        if os.environ.get("ENVIRONMENT", "NON_LOCAL") == "LOCAL":
+            if user_override:
+                logging.info("Using DB_USER %s local override", user_override)
+                os.environ["DB_USER"] = user_override
+                import getpass
+                pwd_override = getpass.getpass("DB_PASSWORD: ")
+                os.environ["DB_PASSWORD"] = pwd_override
 
 
 class SchemaType(StrEnum):

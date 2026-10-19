@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 from ..transform import Transform
 
 
-# TODO $$$BATCH_TIME i airflow -> envvariable -> dict blir $$BATCH_TIME
 @pytest.fixture(scope="session")
 def config():
     return [
