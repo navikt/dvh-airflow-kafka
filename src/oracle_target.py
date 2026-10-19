@@ -72,6 +72,11 @@ class OracleTarget(Target):
             bind_values = dict(zip(sequential_bind_variable_names, person_identer))
             bind_values.update({"timestamp": timestamp})
 
+            if not oracledb.is_simple_sql_name(k6_conf.filter_col):
+                raise ValueError(f"{k6_conf.filter_col} is not a valid unquoted SQL identifier")
+            if not oracledb.is_simple_sql_name(k6_conf.filter_table):
+                raise ValueError(f"{k6_conf.filter_table} is not a valid unquoted SQL identifier")
+
             sql = f"""
                 SELECT {k6_conf.filter_col}
                 FROM {k6_conf.filter_table}
@@ -98,6 +103,9 @@ class OracleTarget(Target):
 
         batch = list(map(transform, batch))
         columns = list(batch[0].keys())
+        for column in columns:
+            if not oracledb.is_simple_sql_name(column):
+                raise ValueError(f"{column} is not a valid unqoted SQL identifier")
         sql = f"insert into {table} ({','.join(columns)}) select :{',:'.join(columns)} from dual where 1=1"
 
         duplicate_column = self.config.skip_duplicates_with
