@@ -164,13 +164,13 @@ class Transform:
         """
 
         transformed_message = dict()
-        ## TODO lokalt er det $$BATCH_TIME, i airflow brukes $$$BATCH_TIME
+        # TODO $$$BATCH_TIME i airflow -> envvariable -> dict blir $$BATCH_TIME
         for rule in self.rules:
             if rule.src[:2] == "$$":
-                if rule.src[2:] == "BATCH_TIME":
+                if rule.src[2:] in ("BATCH_TIME", "$BATCH_TIME"):
                     item = self.batch_time
                 else:
-                    raise NotImplementedError("unsupported identifier")
+                    raise NotImplementedError(f"unsupported identifier: {rule.src}")
             elif rule.src[:1] == "$":
                 item = rule.src[1:]  # string literal
             else:

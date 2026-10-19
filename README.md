@@ -164,7 +164,7 @@ transform:
     dst: kafka_message
   - src: <kildenavn> # eks $PERMITTERING
     dst: KILDESYSTEM
-  - src: $$BATCH_TIME
+  - src: $$BATCH_TIME # use $$$BATCH_TIME in airflow
     dst: lastet_tid
 ```
 
