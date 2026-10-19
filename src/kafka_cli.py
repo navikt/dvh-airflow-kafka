@@ -303,16 +303,16 @@ class KafkaCLI:
             raise ValueError(f"No message found at offset {offset} in partition {partition.partition}.")
         return datetime.fromtimestamp(messages[0].timestamp()[1] / 1000, tz=UTC)
 
-    def last_message_in_partition(self, partition: TopicPartition, lookbehind=100) -> dict|None:
+    def last_message_before_offset(self, partition: TopicPartition, offset: int, lookbehind=100) -> dict|None:
         """Return the last message in a partition, or None if the partition is empty.
         There may be a gap between the high watermark and the last message, so this function looks back a few messages.
         """
         low, high = self.watermarks([partition])[partition.partition]
         if high <= low:
             return None
-        messages = self._fetch([partition], OffsetRange(max(low, high - lookbehind), high, lookbehind))
+        messages = self._fetch([partition], OffsetRange(max(low, offset - lookbehind), offset, lookbehind))
         if len(messages) == 0:
-            logger.warning("No messages found in the last %d messages of partition %d, defaulting to None", lookbehind, partition.partition)
+            logger.warning("No messages found in the last %d messages of partition %d before %d, defaulting to None", lookbehind, offset, partition.partition)
             return None
         return self.decode(messages[-1])
 
@@ -332,21 +332,25 @@ class KafkaCLI:
         for partition in committed:
             low, high = watermarks[partition.partition]
             logger.debug("Watermarks for partition %d: low=%d, high=%d", partition.partition, low, high)
-            offset = partition.offset if partition.offset >= 0 else None
-            ts_committed_offset = self.timestamp_at_offset(partition, offset) if offset is not None else None
+            logger.debug("Committed offset for partition %d: %d", partition.partition, partition.offset)
+            committed_offset = partition.offset if partition.offset >= 0 else None
             ts_earliest_offset = self.timestamp_at_offset(partition, low) if high > low else None
-            last_message = self.last_message_in_partition(partition, lookbehind=20)
+            last_committed_message = self.last_message_before_offset(partition, committed_offset, lookbehind=20)
+            last_message = self.last_message_before_offset(partition, high, lookbehind=20)
             print_as_json(
                 {
                     "topic": partition.topic,
                     "partition": partition.partition,
                     "group_id": self.group_id,
-                    "committed_offset": offset,
+                    "committed_offset": committed_offset,
                     "earliest_offset": low,
                     "end_offset": high,
-                    "lag": None if offset is None else max(0, high - offset),
-                    "timestamp_committed_offset": ts_committed_offset,
+                    "lag": None if committed_offset is None else max(0, high - committed_offset),
                     "timestamp_earliest_offset": ts_earliest_offset,
+                    "last_committed_message": None if last_committed_message is None else {
+                        "offset": last_committed_message["offset"],
+                        "timestamp": last_committed_message["timestamp"],
+                    },
                     "last_message": None if last_message is None else {
                         "offset": last_message["offset"],
                         "timestamp": last_message["timestamp"],

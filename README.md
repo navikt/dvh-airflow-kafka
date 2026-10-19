@@ -317,8 +317,11 @@ Eksempel for `offsets` kommandoen:
   "earliest_offset": 0,
   "end_offset": 8169,
   "lag": 8,
-  "timestamp_committed_offset": "2026-10-15 09:51:03.995000+00:00",
   "timestamp_earliest_offset": "2024-03-21 09:49:47.955000+00:00",
+  "last_committed_message": {
+    "offset": 8160,
+    "timestamp": "2026-10-16T03:21:48.123500+00:00"
+  },
   "last_message": {
     "offset": 8167,
     "timestamp": "2026-10-16T07:23:27.751000+00:00"
