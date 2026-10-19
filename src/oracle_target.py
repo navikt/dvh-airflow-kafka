@@ -21,10 +21,14 @@ class OracleTarget(Target):
 
     @staticmethod
     def oracle_connection() -> oracledb.Connection:
+        user = os.environ["DB_USER"]
+        dsn = os.environ["DB_DSN"]
+        host_config = dsn.split("@")[-1]
+        logging.info(f"Connecting to {host_config} as {user}")
         return OracleTarget.connection_class(
-            user=os.environ["DB_USER"],
+            user=user,
             password=os.environ["DB_PASSWORD"],
-            dsn=os.environ["DB_DSN"],
+            dsn=dsn,
         )
 
     def get_latest_timestamp_for_delta(self):
@@ -100,12 +104,12 @@ class OracleTarget(Target):
         if duplicate_column:
             duplicate_columns = [f"{item}=:{item}" for item in duplicate_column]
             bind_duplicate_column_names = " and ".join(duplicate_columns)
-            sql += f""" and not exists ( select null from {table} where 
+            sql += f""" and not exists ( select null from {table} where
             {bind_duplicate_column_names} )"""
 
         with self.oracle_connection() as con:
             try:
-                logging.info(f"Starting insert of batch")
+                logging.info(f"Starting insert of batch with {len(batch)} records")
                 with con.cursor() as cur:
                     cur.setinputsizes(
                         **self.get_kv_from_config_by_method("oracledb.Cursor.setinputsizes")

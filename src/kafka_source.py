@@ -313,6 +313,7 @@ class KafkaSource(Source):
                     if not err.retriable() or err.fatal():
                         raise KafkaException(err)
                     elif err.code() == KafkaError._PARTITION_EOF:
+                        logging.info("End of partition reached")
                         err_topic = message.topic()
                         err_partition = message.partition()
                         assert err_topic is not None, "Topic missing in EOF sentinel object"
@@ -340,7 +341,7 @@ class KafkaSource(Source):
                         )
 
                 if (len(batch) >= batch_size or not assigned_partitions) and len(batch) > 0:
-                    logging.info("Yielding kafka batch.")
+                    logging.info(f"Yielding kafka batch with {len(batch)} records")
 
                     yield batch, process_summary
                     process_summary.written_to_db_count += len(batch)
@@ -348,6 +349,7 @@ class KafkaSource(Source):
         except Exception as exc:
             process_summary.error_count += 1
             if batch:
+                logging.info(f"Yielding kafka batch with {len(batch)} records")
                 batch_len = len(batch)
                 yield batch, process_summary
                 process_summary.written_to_db_count += batch_len
@@ -365,6 +367,7 @@ class KafkaSource(Source):
         """Reads messages from topic by subscribing to it."""
         process_summary = ProcessSummary()
         self.consumer = self.make_consumer()
+        logging.info("Subscribing to %s", self.config.topic)
         self.consumer.subscribe([self.config.topic])
         batch = []
         try:
@@ -372,7 +375,7 @@ class KafkaSource(Source):
                 m = self._poll()
 
                 if m is None:  # No messages
-                    logging.info("End of kafka log. Exiting")
+                    logging.info("End of partition reached")
                     break
 
                 process_summary.event_count += 1
@@ -390,6 +393,7 @@ class KafkaSource(Source):
                     process_summary.data_count += 1
 
                 if len(batch) == self.config.batch_size:
+                    logging.info(f"Yielding kafka batch with {len(batch)} records")
                     yield batch, process_summary
                     process_summary.written_to_db_count += len(batch)
                     self.subscribe_commit(self.consumer)
@@ -408,6 +412,7 @@ class KafkaSource(Source):
             raise RuntimeError(error_message, process_summary) from exc
         finally:
             if batch:
+                logging.info(f"Yielding kafka batch with {len(batch)} records")
                 yield batch, process_summary
                 process_summary.written_to_db_count += len(batch)
                 self.subscribe_commit(self.consumer)

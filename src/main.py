@@ -13,24 +13,6 @@ from .oracle_target import OracleTarget
 from .config import set_secrets_as_envs, SecretConfig
 
 
-project_secret_path = os.environ.get("PROJECT_SECRET_PATH", None)
-if project_secret_path:
-    set_secrets_as_envs()
-else:
-    config = SecretConfig(
-        source_secret_path=os.environ["SOURCE_SECRET_PATH"],
-        target_secret_path=os.environ["TARGET_SECRET_PATH"],
-    )
-    config.load_secrets_to_env()
-
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-logging.basicConfig(
-    format='{"msg":"%(message)s", "time":"%(asctime)s", "level":"%(levelname)s"}',
-    force=True,
-    level=logging.getLevelName(LOG_LEVEL),
-)
-
-
 def kafka_to_oracle_etl_mapping(config: Text):
     config = yaml.safe_load(stream=config)
     source = KafkaSource(config["source"])
@@ -41,6 +23,9 @@ def kafka_to_oracle_etl_mapping(config: Text):
 def write_to_xcom(process_summary: ProcessSummary) -> None:
     if os.environ["ENVIRONMENT"] != "TEST":
         target_path = os.environ.get("XCOM_TARGET_PATH", "/airflow/xcom/return.json")
+        if not target_path:
+            logging.info("Skipping xcom output")
+
         with open(target_path, "w") as xcom:
             xcom.write(
                 json.dumps(dict(
@@ -54,8 +39,29 @@ def write_to_xcom(process_summary: ProcessSummary) -> None:
                 ))
             )
 
+def load_secrets():
+    project_secret_path = os.environ.get("PROJECT_SECRET_PATH", None)
+    if project_secret_path:
+        set_secrets_as_envs()
+    else:
+        config = SecretConfig(
+            source_secret_path=os.environ["SOURCE_SECRET_PATH"],
+            target_secret_path=os.environ["TARGET_SECRET_PATH"],
+        )
+        config.load_secrets_to_env()
+
+
 def main() -> None:
     """Main consumer thread"""
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    logging.basicConfig(
+        format='{"msg":"%(message)s", "time":"%(asctime)s", "level":"%(levelname)s"}',
+        force=True,
+        level=logging.getLevelName(LOG_LEVEL),
+    )
+    load_secrets()
+
+    logging.info("Starting Kafka to Oracle ETL")
     try:
         # run_arguments()
         if not os.getenv("ENVIRONMENT"):
