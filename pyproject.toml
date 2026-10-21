@@ -32,12 +32,16 @@ dev = [
 [tool.uv]
 python-downloads = "never"
 package = false
+required-version = ">=0.13.4"
 
 # Due to vulnerabilities, some dependencies need to be overridden to a specific version.
 # This also might require excluding those dependencies from the dependency cooldown.
 override-dependencies = [
     "cryptography>=50.0.0",
     "pygments>=2.20.0",
+    "certifi>=2026.10.19",
+    "sigstore>=4.5.1",
+    "pixi>=0.82.1",
 ]
 
 [tool.ruff]
