@@ -11,9 +11,12 @@ WORKDIR "/app"
 # Install uv via pip, then use it to sync dependencies
 COPY pyproject.toml uv.lock ./
 
+USER root
+RUN apk add tzdata
+USER nonroot
+
 RUN pip install uv && \
-    uv sync --frozen --no-dev && \
-    apk add tzdata
+    uv sync --frozen --no-dev
 
 # App stage: minimal runtime image
 FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/python:3.13
