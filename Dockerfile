@@ -12,7 +12,8 @@ WORKDIR "/app"
 COPY pyproject.toml uv.lock ./
 
 RUN pip install uv && \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev && \
+    apk add tzdata
 
 # App stage: minimal runtime image
 FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/python:3.13
@@ -23,6 +24,9 @@ ENV PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
 
 WORKDIR "/app"
+
+# time zone information
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
 # Copy virtual environment from builder and application source
 COPY --from=builder "/app/.venv" "/app/.venv"
