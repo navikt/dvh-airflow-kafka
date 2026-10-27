@@ -102,14 +102,36 @@ class OracleTarget(Target):
             bind_duplicate_column_names = " and ".join(duplicate_columns)
             sql += f""" and not exists ( select null from {table} where 
             {bind_duplicate_column_names} )"""
+        
+        column_type_override = self.get_kv_from_config_by_method("oracledb.Cursor.setinputsizes")
+
+        lob_columns = {
+            column_name:column_type for column_name, column_type in column_type_override.items()
+            if column_type in (oracledb.DB_TYPE_BLOB, oracledb.DB_TYPE_CLOB, oracledb.DB_TYPE_NCLOB)
+        }
 
         with self.oracle_connection() as con:
             try:
-                logging.info(f"Starting insert of batch")
+                if lob_columns: 
+                    # Since oracle version 26.0, large string or byte values are no longer converted to LOB types automatically.
+                    # This leads to errors when the size exceeds 32kb. At the same time, strings are no longer converted to bytes automatically,
+                    # when inserting into BLOB column. In this case, the user has to specify the byte encoding as part of the configuration file.
+                    # Example: 
+                    #     src: kafka_message
+                    #     dst: kafka_message
+                    #     fun: str -> byte-utf8
+                    # Note: this does not affect if oracle stores the lob within the row or outside of the row, the database 
+                    # handles this automatically. 
+                    for item in batch:
+                        for column_name, lob_type in lob_columns.items():
+                            if column_name not in item:
+                                raise KeyError(f"Error in custom config: {column_name} is not a database column")
+                            elif len(item[column_name]) >= (1024*31): 
+                                item[column_name] = con.createlob(lob_type, item[column_name])
+
+                logging.info(f"Starting insert of batch with { len(batch)} records")
                 with con.cursor() as cur:
-                    cur.setinputsizes(
-                        **self.get_kv_from_config_by_method("oracledb.Cursor.setinputsizes")
-                    )
+                    cur.setinputsizes(**column_type_override)
                     cur.executemany(sql, batch)
                 con.commit()
                 logging.info(f"Batch of size {len(batch)} inserted")
