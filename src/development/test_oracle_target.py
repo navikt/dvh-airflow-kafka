@@ -184,7 +184,25 @@ def test_write_batch_with_large_message(transform_config, size_bytes: int, lob_t
         melding_str = melding_str + "x" * (size_bytes - len(melding_str.encode("utf-8")))
         melding_byte = melding_str.encode("utf-8")
         kafka_hash = hashlib.sha256(melding_byte).hexdigest()
-        record = {
+
+        # Start with a message that is not a LOB. This is to test an edge case where Oracle v26 falsely infers
+        # the data type of kafka_message as raw or varchar, even though we used setinputsizes to force it to be a LOB.
+        # In this case, a later insert of a LOB will fail with DPY-3013: unsupported Python type LOB for database type DB_TYPE_RAW
+        # We implemented a workaround, where the first record in the batch is always converted to a LOB.
+        # Without this workaround, tests for sizes 32 and 32*1024-1 succeed, the others for larger sizes fail.
+        # This however showed another bug which might lead to data loss, so we reverted to before oracle v26 and will investigate.
+        # This test is kept to show that oracledb < 26 does not have this bug.
+        record0 = {
+            "kafka_key": f"key 0",
+            "kafka_topic": "topic-name",
+            "kafka_offset": 0,
+            "kafka_partition": 0,
+            "kafka_timestamp": int(datetime(2025, 1, 1).timestamp()),
+            "kafka_message": "x",
+            "person_id":0,
+            "kafka_hash": kafka_hash,
+        }
+        record1 = {
             "kafka_key": f"key 1",
             "kafka_topic": "topic-name",
             "kafka_offset": 1,
@@ -195,7 +213,7 @@ def test_write_batch_with_large_message(transform_config, size_bytes: int, lob_t
             "kafka_hash": kafka_hash,
         }
 
-        oracle_target.write_batch([record], transform)
+        oracle_target.write_batch([record0, record1], transform)
 
         with oracle_target.oracle_connection() as con:
             with con.cursor() as cur:
@@ -205,7 +223,10 @@ def test_write_batch_with_large_message(transform_config, size_bytes: int, lob_t
                 )
                 r = cur.fetchall()
 
-                assert len(r) == 1
-                assert r[0][0] == "key 1"
-                assert r[0][1] == 1
-                assert r[0][2].read() == (melding_byte if lob_type == "BLOB" else melding_str)
+                assert len(r) == 2
+                assert r[0][0] == "key 0"
+                assert r[0][1] == 0
+                assert r[0][2].read() == (b"x" if lob_type == "BLOB" else "x")
+                assert r[1][0] == "key 1"
+                assert r[1][1] == 1
+                assert r[1][2].read() == (melding_byte if lob_type == "BLOB" else melding_str)
