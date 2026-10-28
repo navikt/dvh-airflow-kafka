@@ -4,7 +4,6 @@ import logging
 import pytz
 
 import oracledb
-from oracledb import Connection
 
 from .base import Target
 from .transform import int_ms_to_date
@@ -86,7 +85,6 @@ class OracleTarget(Target):
         if not batch:
             return
 
-        # mask kafka messages for kode 6/7 persons
         k6_conf = self.config.k6_filter
         if k6_conf:
             kode67_personer = set(*zip(*self.get_kode67(batch)))
@@ -94,12 +92,10 @@ class OracleTarget(Target):
                 if self.get_person_identifier(msg, k6_conf.col) in kode67_personer:
                     msg["kafka_message"] = None
 
-        # Apply transformations
         batch = list(map(transform, batch))
         columns = list(batch[0].keys())
         sql = f"insert into {table} ({','.join(columns)}) select :{',:'.join(columns)} from dual where 1=1"
 
-        # If the user has specified columns to skip duplicates on, add a NOT EXISTS clause to the insert statement
         duplicate_column = self.config.skip_duplicates_with
         if duplicate_column:
             duplicate_columns = [f"{item}=:{item}" for item in duplicate_column]
@@ -107,37 +103,13 @@ class OracleTarget(Target):
             sql += f""" and not exists ( select null from {table} where 
             {bind_duplicate_column_names} )"""
 
-        column_type_override = self.get_kv_from_config_by_method("oracledb.Cursor.setinputsizes")
-
-        # LOB columns need special treatment, see following comment
-        lob_columns = {
-            column_name: column_type for column_name, column_type in column_type_override.items()
-            if column_type in (oracledb.DB_TYPE_BLOB, oracledb.DB_TYPE_CLOB, oracledb.DB_TYPE_NCLOB)
-        }
-        # Check if the columns specified in the custom config are actually present in the database record
-        for column_name in lob_columns.keys():
-            if column_name not in columns:
-                raise KeyError(f"Error in custom config: {column_name} is not a database column")
-
         with self.oracle_connection() as con:
             try:
-                if lob_columns:
-                    # Since oracle version 26.0, large string or byte values are no longer converted to LOB types automatically.
-                    # This leads to errors when the size exceeds 32kb. At the same time, strings are no longer converted to bytes automatically,
-                    # when inserting into BLOB column. In this case, the user has to specify the byte encoding as part of the configuration file.
-                    # Example:
-                    #     src: kafka_message
-                    #     dst: kafka_message
-                    #     fun: str -> byte-utf8
-                    # Note: this does not affect if oracle stores the lob within the row or outside of the row, the database
-                    # handles this automatically.
-                    for item in batch:
-                        for column_name, lob_type in lob_columns.items():
-                            self._create_temp_lob_if_needed(column_name, con, item, lob_type)
-
-                logging.info(f"Starting insert of batch with {len(batch)} records")
+                logging.info(f"Starting insert of batch")
                 with con.cursor() as cur:
-                    cur.setinputsizes(**column_type_override)
+                    cur.setinputsizes(
+                        **self.get_kv_from_config_by_method("oracledb.Cursor.setinputsizes")
+                    )
                     cur.executemany(sql, batch)
                 con.commit()
                 logging.info(f"Batch of size {len(batch)} inserted")
@@ -149,38 +121,3 @@ class OracleTarget(Target):
                 logging.error(f"oracle sql statement: {sql}")
                 logging.error(f"oracle batch of size: {len(batch)}")
                 raise
-
-    @staticmethod
-    def _create_temp_lob_if_needed(column_name, con: Connection, item: dict[str, Any], lob_type):
-        """Create a temporary LOB if the value exceeds the size threshold.
-
-        A temporary lob is created with con.createlob. This allocates a temporary lob in the database, which requires
-        a roundtrip to the database. This is expensive, so we do everything to avoid that by checking the size
-        of the value. The threshold is 32kb, below we can insert the value directly.
-        """
-        lob_value = item[column_name]
-        if lob_type == oracledb.DB_TYPE_BLOB:
-            if not isinstance(lob_value, bytes):
-                raise ValueError(f"Column {column_name} is configured as BLOB, but the value is not bytes. "
-                                 f"Please convert the value to bytes, e.g. with 'fun: \"str -> byte-utf8\"' in the transform config.")
-            # bytes: len == number of bytes
-            if len(lob_value) >= 1024 * 32:
-                item[column_name] = con.createlob(lob_type, lob_value)
-        elif lob_type in (oracledb.DB_TYPE_CLOB, oracledb.DB_TYPE_NCLOB):
-            if not isinstance(lob_value, str):
-                raise ValueError(f"Column {column_name} is configured as CLOB/NCLOB, but the value is not a string. "
-                                 f"Please remove any 'fun: \"str -> byte-utf8\"' conversions from the transform config.")
-            # str: len == number of characters, each taking between 1 and 4 bytes.
-            if len(lob_value) >= 1024 * 32:
-                item[column_name] = con.createlob(lob_type, lob_value)
-            elif len(lob_value) >= 1024 * 32 / 4:  # 4 bytes per character is the worst case for UTF-8
-                # Could be over 32kb in bytes, so convert to bytes and check length.
-                # Takes some extra resources, but it is a lot cheaper than a roundtrip to the database
-                # to create a temporary lob.
-                lob_value_bytes = lob_value.encode("utf-8")
-                if len(lob_value_bytes) >= 1024 * 32:
-                    item[column_name] = con.createlob(lob_type, lob_value)
-        else:
-            raise NotImplementedError(f"Unsupported lob type {lob_type} for column {column_name}")
-
-        # All fallthrough cases: if the value is below the threshold, we do nothing and insert it directly.

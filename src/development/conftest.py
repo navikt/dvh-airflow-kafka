@@ -172,17 +172,12 @@ def setup_oracle():
 
 
 def create_table(table_name, columns):
-    create_sql = f"create table SYSTEM.{table_name} ({",".join(columns)})"
-    exists_sql = f"select table_name from all_tables where table_name = '{table_name.upper()}' and owner = 'SYSTEM'"
-    drop_sql = f"drop table SYSTEM.{table_name}"
+
+    sql = f"""create table SYSTEM.{table_name} ({",".join(columns)}) """
 
     with OracleTarget.oracle_connection() as con:
         with con.cursor() as cur:
-            cur.execute(exists_sql)
-            if cur.fetchone():
-                cur.execute(drop_sql)
-
-            cur.execute(create_sql)
+            cur.execute(sql)
         con.commit()
 
 
