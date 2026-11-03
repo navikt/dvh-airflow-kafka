@@ -5,7 +5,10 @@ dvh-airflow-kafka kan benyttes for å konsumere data fra kafka-topics i Aiven og
 Følg denne [guiden](kafka-topic.md) for å opprette en NAIS applikasjon som har tilgang til ønsket topic.
 
 # Lokal utvikling
-Opprett utviklingsmiljøet:
+
+Prosjektet kan kjøres på mobilitets PC, og i KNAST. For å kjøre testene, bruk mobilitets PC. For å kjøre mot databasen, bruk KNAST.
+
+Opprett utviklingsmiljøet, likt for både KNAST og mobilitets PC, med:
 
 ```bash
 git clone ...
@@ -33,11 +36,12 @@ Sett miljøvariablen `KEEP_CONTAINERS` til `true` for å beholde containerne ett
 
 I KNAST konfigurasjon, åpne opp brannmuren for databasen og aiven/kafka. Din bruker trenger tilgang til kafka hemmeligheten i Google Secret Manager og proxytilgang til databaseskjemaet.
 
-Skriv konsumentkonfigurasjonen til en sti på disken, ref. dokumentasjon om kjøring i airflow.
+Skriv konsumentkonfigurasjonen til en valgfri sti på disken, ref. dokumentasjon om kjøring i airflow.
 
 ```bash
 # Konsumentkonfigurasjon
-export CONSUMER_CONFIG_PATH="/path/to/consumer_config.yml"
+# I dette eksempelet, konfigurasjonsfilen ble lagt i home mappen. Men det kunne også vært stien til en fil i repoet, etc.
+export CONSUMER_CONFIG_PATH="/home/user/consumer_config.yml"
 # GSM hemmelighet med kafka konfigurasjon
 export SOURCE_SECRET_PATH="projects/{PROJECT_ID}/secrets/{KAFKA_SECRET_NAME}/versions/latest"
 # GSM hemmelighet med db konfigurasjon
@@ -110,7 +114,7 @@ Informasjon om kjøringen logges til xcom (`/airflow/xcom/return.json`, or `XCOM
 
 For å avslutte prosessen med feil (exit kode 1) når det er flere enn én ikke-kritisk feil, sett miljøvariablen `FAIL_ON_NON_CRITICAL_ERROR` til `true`.
 
-Kodeeksempler [dv-a-team-dags/consumer_configs](https://github.com/navikt/dv-a-team-dags/tree/main/consumer_configs)
+Kodeeksempler [dv-a-team-dags/consumer_configs](https://github.com/navikt/dv-a-team-dags/tree/main/kafka/consumer_configs)
 
 Eksempel config:
 ```yaml
@@ -239,7 +243,7 @@ hemmeligheten. Secret resource name må inkludere versjon, for eksempel
 Kafka-miljøvariabler som `KAFKA_BROKERS`, `KAFKA_CERTIFICATE`, `KAFKA_PRIVATE_KEY` og `KAFKA_CA`. For Avro kreves
 også `KAFKA_SCHEMA_REGISTRY`, `KAFKA_SCHEMA_REGISTRY_USER` og `KAFKA_SCHEMA_REGISTRY_PASSWORD`.
 
-Angi secret resource name med `--project-secret-path` eller miljøvariabelen `PROJECT_SECRET_PATH`.
+Angi secret resource name med `--source-secret-path` eller miljøvariabelen `SOURCE_SECRET_PATH`.
 Konfigurasjonsfilen angis med `--config` eller `CONSUMER_CONFIG_PATH`. Filen kan være den vanlige YAML-konfigurasjonen
 med en `source:`-seksjon, eller bare kildekonfigurasjonen. Den må inneholde blant annet `type`, `batch-size`,
 `topic`, `group-id` og `schema`.
@@ -259,7 +263,7 @@ Sett variablene én gang, og kjør deretter kommandoene fra repository-roten.
 Bruk `jq` for å formatere JSON-linjer.
 
 ```bash
-export PROJECT_SECRET_PATH="projects/my-project/secrets/kafka-credentials/versions/latest"
+export SOURCE_SECRET_PATH="projects/my-project/secrets/kafka-credentials/versions/latest"
 export CONSUMER_CONFIG_PATH="/home/user/my_project/source.yaml"
 export PYTHON_PATH=$(pwd):$PYTHON_PATH
 
@@ -270,13 +274,22 @@ uv run python -m src.kafka_cli fetch --partition 0 --offset 123 | jq
 uv run python -m src.kafka_cli fetch --partition 0 --start-offset 123 --end-offset 150 | jq
 
 # Hent meldinger i et tidsintervall med tidssone fra alle partisjoner.
-uv run python -m src.kafka_cli fetch --start-time "2026-10-07T08:00:00+02:00" --end-time "2026-10-07T09:00:00+02:00" --limit 1000 | jq
+# NB! Kafka tidspunkter trenger ikke være i riktig rekkefølge, så det er mulig at et 
+# tidsintervall ikke inkluderer alle meldinger i det intervallet. 
+uv run python -m src.kafka_cli fetch \
+    --start-time "2026-10-07T00:00:00+02:00" \
+    --end-time "2026-10-07T23:59:59+02:00" \
+    --limit 1000 \
+    | jq
 
 # Vis lagrede offsets, vannmerker og estimert etterslep for consumer group.
 uv run python -m src.kafka_cli offsets | jq
 
 # Finn offset-grenser som inneholder tidsintervallet.
-uv run python -m src.kafka_cli offsets-for-times --start-time "2026-10-07T08:00:00+02:00" --end-time "2026-10-07T09:00:00+02:00" | jq
+uv run python -m src.kafka_cli offsets-for-times \
+    --start-time "2026-10-07T08:00:00+02:00" \
+    --end-time "2026-10-07T09:00:00+02:00" \
+    | jq
 
 # Forhåndsvis ny offset (gjør ingen endringer uten --execute).
 uv run python -m src.kafka_cli set-offset --partition 0 --offset 123 | jq
@@ -289,7 +302,7 @@ Alternativt kan ressursnavnet sendes direkte i CLI-et:
 
 ```bash
 uv run python -m src.kafka_cli \
-    --project-secret-path "projects/my-project/secrets/kafka-credentials/versions/latest" \
+    --source-secret-path "projects/my-project/secrets/kafka-credentials/versions/latest" \
     --config "/home/user/my_project/source.yaml" \
     offsets | jq
 ```

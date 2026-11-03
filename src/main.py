@@ -68,7 +68,7 @@ def main() -> None:
             os.environ["ENVIRONMENT"] = "NOT_LOCAL"
 
         if "CONSUMER_CONFIG_PATH" in os.environ:
-            consumer_config = Path(os.environ["CONSUMER_CONFIG_PATH"]).read_text(encoding="utf-8")
+            consumer_config = Path(os.environ["CONSUMER_CONFIG_PATH"]).resolve().read_text(encoding="utf-8")
         else:
             consumer_config = os.environ["CONSUMER_CONFIG"]
 

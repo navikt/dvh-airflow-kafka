@@ -89,9 +89,9 @@ def configure_logging(level: str) -> None:
     )
 
 
-def load_mapping(path: str) -> dict:
+def load_mapping(path: Path) -> dict:
     """Load a JSON or YAML file and require its root value to be a mapping."""
-    with Path(path).open(encoding="utf-8") as stream:
+    with path.open(encoding="utf-8") as stream:
         try:
             result = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
@@ -102,16 +102,16 @@ def load_mapping(path: str) -> dict:
     return result
 
 
-def load_source(project_secret_path: str, config_path: str) -> KafkaSource:
+def load_source(source_secret_path: str, config_path: str) -> KafkaSource:
     """Load Kafka secrets from GSM and SourceConfig from JSON or YAML."""
-    configuration = load_mapping(config_path)
+    configuration = load_mapping(Path(config_path).resolve())
     source_config = SourceConfig.model_validate(
         configuration.get("source", configuration)
     )
 
     # Reuse the project's Secret Manager loader, which places secret values in
     # the environment for KafkaSource's existing client configuration.
-    os.environ["PROJECT_SECRET_PATH"] = project_secret_path
+    os.environ["SOURCE_SECRET_PATH"] = str(Path(source_secret_path).resolve())
     set_secrets_as_envs()
 
     required = ["KAFKA_BROKERS", "KAFKA_CERTIFICATE", "KAFKA_PRIVATE_KEY", "KAFKA_CA"]
@@ -294,27 +294,41 @@ class KafkaCLI:
 
     def timestamp_at_offset(self, partition: TopicPartition, offset: int) -> datetime|None:
         """Return the timestamp of a specific message offset in a partition."""
+        # If the offset is outside the partition's watermarks, it does not exist (yet, if it is the high watermark).
+        low, high = self.watermarks([partition])[partition.partition]
+        if not low <= offset < high:
+            return None
+
         try:
             messages = self._fetch([partition], OffsetRange(offset, offset + 1, 1))
         except TimeoutError:
             logger.warning("Timed out fetching timestamp of partition %d at offset %d, defaulting to None", partition.partition, offset)
             return None
-        if len(messages) == 0:
-            raise ValueError(f"No message found at offset {offset} in partition {partition.partition}.")
+
+        if not messages:
+            return None
+
         return datetime.fromtimestamp(messages[0].timestamp()[1] / 1000, tz=UTC)
 
-    def last_message_before_offset(self, partition: TopicPartition, offset: int, lookbehind=100) -> dict|None:
-        """Return the last message in a partition, or None if the partition is empty.
+    def last_message_meta_in_partition(self, partition: TopicPartition, offset: int, lookbehind=100) -> dict | None:
+        """Return metadata about last message in a partition, or None if the partition is empty.
         There may be a gap between the high watermark and the last message, so this function looks back a few messages.
         """
         low, high = self.watermarks([partition])[partition.partition]
         if high <= low:
             return None
+
         messages = self._fetch([partition], OffsetRange(max(low, offset - lookbehind), offset, lookbehind))
-        if len(messages) == 0:
+        if not messages:
             logger.warning("No messages found in the last %d messages of partition %d before %d, defaulting to None", lookbehind, offset, partition.partition)
             return None
-        return self.decode(messages[-1])
+
+        message = messages[-1]
+
+        return {
+            "offset": message.offset(),
+            "timestamp": datetime.fromtimestamp(message.timestamp()[1] / 1000, tz=UTC).isoformat(),
+        }
 
     def show_offsets(self, partitions: list[TopicPartition]) -> None:
         """Print committed group offsets, watermarks, and lag per partition.
@@ -335,8 +349,8 @@ class KafkaCLI:
             logger.debug("Committed offset for partition %d: %d", partition.partition, partition.offset)
             committed_offset = partition.offset if partition.offset >= 0 else None
             ts_earliest_offset = self.timestamp_at_offset(partition, low) if high > low else None
-            last_committed_message = self.last_message_before_offset(partition, committed_offset, lookbehind=20)
-            last_message = self.last_message_before_offset(partition, high, lookbehind=20)
+            last_committed_message = self.last_message_meta_before_offset(partition, committed_offset, lookbehind=20)
+            last_message = self.last_message_meta_in_partition(partition, high, lookbehind=20)
             print_as_json(
                 {
                     "topic": partition.topic,
@@ -714,11 +728,11 @@ def build_parser() -> argparse.ArgumentParser:
         description="Development tools for Kafka messages and group offsets."
     )
     parser.add_argument(
-        "--project-secret-path",
-        default=os.environ.get("PROJECT_SECRET_PATH"),
+        "--source-secret-path",
+        default=os.environ.get("SOURCE_SECRET_PATH"),
         help=(
             "Google Secret Manager version resource name; defaults to "
-            "PROJECT_SECRET_PATH."
+            "SOURCE_SECRET_PATH."
         ),
     )
     parser.add_argument(
@@ -742,7 +756,10 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
 
     fetch = commands.add_parser(
-        "fetch", help="Fetch messages without committing offsets. Use either offsets or timestamps"
+        "fetch",
+        help=("Fetch messages without committing offsets. Use either offsets or timestamps. "
+              "Warning! Record timestamps can be out of order, so a timestamp range may not "
+              "include all messages in that range.")
     )
     selection = fetch.add_mutually_exclusive_group(required=True)
     selection.add_argument(
@@ -880,10 +897,10 @@ def _validate_offset_args(parser: argparse.ArgumentParser, args: argparse.Namesp
 
 def validate_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     """Check required files, ranges, and incompatible options before connecting."""
-    if not args.project_secret_path or not args.config:
+    if not args.source_secret_path or not args.config:
         parser.error(
-            "Provide --project-secret-path and --config, or set "
-            "PROJECT_SECRET_PATH and CONSUMER_CONFIG_PATH."
+            "Provide --source-secret-path and --config, or set "
+            "SOURCE_SECRET_PATH and CONSUMER_CONFIG_PATH."
         )
 
     if args.command == "fetch":
@@ -916,7 +933,7 @@ def main() -> int:
     configure_logging(args.log_level)
 
     try:
-        source = load_source(args.project_secret_path, args.config)
+        source = load_source(args.source_secret_path, args.config)
         logger.info("Loaded source configuration for topic %s and group %s",
                     source.config.topic, source.config.group_id)
         brokers = os.environ["KAFKA_BROKERS"]
