@@ -36,7 +36,7 @@ jobs:
           FULL_SHA: "${{github.sha}}"
           REF: "${{github.ref}}"
         run: |
-          TAG=$(git log -1 --pretty=%ad --date=format:%Y%m%d-%H%M%S)
+          TAG=$(date -u +%Y%m%d-%H%M%S)
           branch="$(echo "$REF" | cut -c12-)"
           if [ "$branch" = "main" ]
           then
@@ -47,7 +47,7 @@ jobs:
           fi
 
       - name: Build and push to Google Artifact Registry
-        uses: nais/docker-build-push@423a915c9b72edf2ba848b88171ccb0489e2a40a # v0
+        uses: nais/docker-build-push@dd7421d5068057a020ca46ead966c26190c516b1 # v0
         id: docker-build-push
         with:
           team: ${{ env.TEAM }}
@@ -59,7 +59,7 @@ jobs:
           docker buildx imagetools create -t "${{ env.IMAGE }}" "${{ steps.docker-build-push.outputs.image }}"
 
       - name: Deploy job to nais
-        uses: nais/deploy/actions/deploy@2d18f050f07b6a007864c6a57070ed915d571beb # v2
+        uses: nais/deploy/actions/deploy@3944168fd20b7eea3818e97de3810f74b54c78ff # v2
         env:
           CLUSTER: prod-gcp
           RESOURCE: .nais/image-job-template.yml

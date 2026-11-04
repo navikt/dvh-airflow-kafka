@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from typing import Optional, List, Dict, Text, Any, Callable, Union
 
 import dateparser
@@ -60,7 +60,7 @@ def str_to_date(x: Optional[Text]) -> Optional[datetime]:
     return _adjust_timezone(y)
 
 
-def str_to_byte_utf8(x: Optional[Text]) -> Optional[datetime]:
+def str_to_byte_utf8(x: Optional[Text]) -> Optional[bytes]:
     """
     fun: str -> byte-utf8
 
@@ -164,7 +164,7 @@ class Transform:
         self.set_batch_time()
 
     def set_batch_time(self):
-        self.batch_time = datetime.today()
+        self.batch_time = _adjust_timezone(datetime.now(tz=UTC))
 
     def __call__(self, message: Dict[Text, Any]) -> Dict[Text, Any]:
         """Returns transformed message

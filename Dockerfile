@@ -11,6 +11,10 @@ WORKDIR "/app"
 # Install uv via pip, then use it to sync dependencies
 COPY pyproject.toml uv.lock ./
 
+USER root
+RUN apk add tzdata
+USER nonroot
+
 RUN pip install uv && \
     uv sync --frozen --no-dev
 
@@ -23,6 +27,9 @@ ENV PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
 
 WORKDIR "/app"
+
+# time zone information
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
 # Copy virtual environment from builder and application source
 COPY --from=builder "/app/.venv" "/app/.venv"

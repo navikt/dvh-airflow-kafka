@@ -10,6 +10,7 @@ from typing import Callable
 from unittest.mock import patch, MagicMock
 
 import pytest
+import pytz
 from confluent_kafka import Producer, KafkaError, Message, KafkaException
 from confluent_kafka.admin import NewTopic
 
@@ -21,7 +22,7 @@ from ..transform import Transform
 TABLE_NAME = "RAA_DATA_STROM"
 NOW = datetime(2024, 12, 18, 11, 11, 11)
 MAX_NUM_KAFKA_MESSAGES = 1000
-
+TZ_OSLO = pytz.timezone("Europe/Oslo")
 
 def build_config(base_config, topic_name: str, strategy: str) -> dict:
     base_config["source"]["topic"] = topic_name
@@ -165,7 +166,7 @@ def test_many_messages(base_config, kafka_admin_client, transform_config, produc
         assert rows[i].offset == i // 2  # starts at 0 for each partition
         assert rows[i].partition == i % 2
         assert rows[i].hash == hashlib.sha256(rows[i].message.encode("utf-8")).hexdigest()
-        assert (rows[i].lastet_tid - datetime.now()) < timedelta(seconds=10)
+        assert (rows[i].lastet_tid - datetime.now(tz=TZ_OSLO).replace(tzinfo=None)) < timedelta(seconds=10)
         assert rows[i].object["id"] == i
         assert rows[i].object["value"] == f"Message {i}"
 
