@@ -25,8 +25,8 @@ def set_secrets_as_envs():
 class SecretConfig:
     def __init__(
         self,
-        source_secret_path: str,
-        target_secret_path: str,
+        source_secret_path: str|None,
+        target_secret_path: str|None,
     ):
         self.source_secret_path = source_secret_path
         self.target_secret_path = target_secret_path
@@ -41,15 +41,17 @@ class SecretConfig:
 
     def load_secrets_to_env(self):
         user_override = os.environ.get("DB_USER")
-        self._set_secret_as_env(secret_name=self.source_secret_path)
-        self._set_secret_as_env(secret_name=self.target_secret_path)
-        if os.environ.get("ENVIRONMENT", "NON_LOCAL") == "LOCAL":
-            if user_override:
-                logging.info("Using DB_USER %s local override", user_override)
-                os.environ["DB_USER"] = user_override
-                import getpass
-                pwd_override = getpass.getpass("DB_PASSWORD: ")
-                os.environ["DB_PASSWORD"] = pwd_override
+        if self.source_secret_path:
+            self._set_secret_as_env(secret_name=self.source_secret_path)
+        if self.target_secret_path:
+            self._set_secret_as_env(secret_name=self.target_secret_path)
+            if os.environ.get("ENVIRONMENT", "NON_LOCAL") == "LOCAL":
+                if user_override:
+                    logging.info("Using DB_USER %s local override", user_override)
+                    os.environ["DB_USER"] = user_override
+                    import getpass
+                    pwd_override = getpass.getpass("DB_PASSWORD: ")
+                    os.environ["DB_PASSWORD"] = pwd_override
 
 
 class SchemaType(StrEnum):

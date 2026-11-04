@@ -268,10 +268,13 @@ export CONSUMER_CONFIG_PATH="/home/user/my_project/source.yaml"
 export PYTHON_PATH=$(pwd):$PYTHON_PATH
 
 # Hent én melding. Offset må kombineres med én partisjon.
-uv run python -m src.kafka_cli fetch --partition 0 --offset 123 | jq
+uv run python -m src.kafka_cli fetch --partition 0 --offset 123 --limit 100 | jq
 
 # Hent offset-intervallet [123, 150): slutt-offseten er eksklusiv.
 uv run python -m src.kafka_cli fetch --partition 0 --start-offset 123 --end-offset 150 | jq
+
+# By default gir fetch kun metadata, vis innhold som følger:
+uv run python -m src.kafka_cli fetch --partition 0 --offset 123 --show-contents | jq
 
 # Hent meldinger i et tidsintervall med tidssone fra alle partisjoner.
 # NB! Kafka tidspunkter trenger ikke være i riktig rekkefølge, så det er mulig at et 
@@ -310,7 +313,7 @@ uv run python -m src.kafka_cli \
 Tidsflaggene godtar Unix-tid i millisekunder eller ISO-8601 med tidssone, for eksempel `2026-10-07T08:00:00Z` for UTC eller `2026-10-07T08:00:00+02:00` for en tidssone med forskyvning på +02:00. ISO-8601 uten tidssone godtas ikke. Tidsintervaller er halvåpne: starttidspunktet er inkludert og sluttidspunktet er
 ekskludert. `fetch` leser direkte fra partisjonene, bruker ikke consumer groupens lagrede posisjon og committer ikke
 offsets. Resultatene skrives som JSON-linjer til stdout; logger skrives til stderr. Meldingsverdiene dekodes etter
-`schema`-innstillingen, men det anvendes ingen filtrering hvis det er konfigurert til produksjonsbruk.
+`schema`-innstillingen, men det anvendes ingen filtrering hvis det er konfigurert til produksjonsbruk. Bruk `--show-contents` for å vise meldingsinnholdet i tillegg til metadata.
 
 `set-offset` endrer denne lagrede posisjonen, ikke posisjonen til en allerede kjørende konsument. `--execute` krever at gruppen er
 inaktiv; hold den stoppet til den tiltenkte konsumenten startes igjen. `--partition` kan gjentas for å velge flere
