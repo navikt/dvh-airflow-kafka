@@ -44,3 +44,4 @@ spec:
     - team: dvh-etl-tools
       application: kafka-canary-consumer
       access: read
+      
