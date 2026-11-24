@@ -218,14 +218,14 @@ transform:
 Måltabellen må ha følgende kolonner:
 ```json
 create table raa_my_topic_strom (
-    kafka_key varchar2(200),
+    kafka_key varchar2(200 char),
     kafka_offset number(38),
     kafka_partition number(38),
     kafka_timestamp timestamp(6),
-    kafka_topic varchar2(200),
-    kafka_hash varchar2(200),
-    kafka_message blob,
-    kildesystem varchar2(200),
+    kafka_topic varchar2(200 char),
+    kafka_hash varchar2(200 char),
+    kafka_message cblob,
+    kildesystem varchar2(200 char),
     lastet_tid timestamp,
 )
 ```
