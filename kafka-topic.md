@@ -1,6 +1,35 @@
 # Oppsett av ny kafka-konsument
 Denne guiden krever følgende verktøy installert: [naisdevice](https://doc.nais.io/how-to-guides/naisdevice/install/), [nais-cli](https://doc.nais.io/how-to-guides/nais-cli/install/), [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl), [gcloud cli](https://cloud.google.com/sdk/docs/install)
 
+## Isolert canary-topic i dev
+
+[Canary-manifestet](.nais/kafka-canary-dev.yml) definerer topicet
+`dvh-etl-tools.union-kafka-canary-v1` i `nav-dev`, med to partisjoner og en ukes retention.
+Topicet skal bare inneholde syntetiske testdata.
+
+Manifestet oppretter to egne Aiven-applikasjoner i `dvh-etl-tools`:
+
+- `kafka-canary-producer` har skrivetilgang og får secretet `kafka-canary-producer-credentials`.
+- `kafka-canary-consumer` har lesetilgang og får secretet `kafka-canary-consumer-credentials`.
+
+[Deploy-workflowen](.github/workflows/deploy_kafka_canary.yml) deployer til `dev-gcp` ved push
+som endrer manifestet, uansett branch. Den kan også startes manuelt fra GitHub Actions.
+Den endrer ingen ressurser i prod.
+
+Etter deploy, kontroller status og at secrets finnes uten å vise innholdet:
+
+```bash
+kubectl --context dev-gcp -n dvh-etl-tools get aivenapplications \
+  kafka-canary-producer kafka-canary-consumer
+kubectl --context dev-gcp -n dvh-etl-tools get topic union-kafka-canary-v1 -o yaml
+kubectl --context dev-gcp -n dvh-etl-tools get secrets \
+  kafka-canary-producer-credentials kafka-canary-consumer-credentials
+```
+
+For kjøring utenfor Nais, overfør legitimasjonen til egne testhemmeligheter i Google Secret Manager
+med `dvh-secret-tools`, som beskrevet nedenfor. Airflow og Union bruker konsumentlegitimasjonen,
+men hver sin consumer group for å lese testmeldingene uavhengig.
+
 Sette opp en [NAIS applikasjon](https://doc.nais.io/how-to-guides/command-line-access/setup/?h=kubectl#2-install-kubectl) fra laptop
 
 - Konfigurer [kubectl](https://doc.nais.io/reference/cli/kubeconfig/?h=kubeconfig)

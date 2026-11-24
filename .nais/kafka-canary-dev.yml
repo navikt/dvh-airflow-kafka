@@ -1,0 +1,46 @@
+apiVersion: aiven.nais.io/v2
+kind: AivenApplication
+metadata:
+  name: kafka-canary-producer
+  namespace: dvh-etl-tools
+  labels:
+    team: dvh-etl-tools
+spec:
+  kafka:
+    pool: nav-dev
+    secretName: kafka-canary-producer-credentials
+---
+apiVersion: aiven.nais.io/v2
+kind: AivenApplication
+metadata:
+  name: kafka-canary-consumer
+  namespace: dvh-etl-tools
+  labels:
+    team: dvh-etl-tools
+spec:
+  kafka:
+    pool: nav-dev
+    secretName: kafka-canary-consumer-credentials
+---
+apiVersion: kafka.nais.io/v1
+kind: Topic
+metadata:
+  name: union-kafka-canary-v1
+  namespace: dvh-etl-tools
+  labels:
+    team: dvh-etl-tools
+spec:
+  pool: nav-dev
+  config:
+    partitions: 2
+    replication: 3
+    minimumInSyncReplicas: 2
+    cleanupPolicy: delete
+    retentionHours: 168
+  acl:
+    - team: dvh-etl-tools
+      application: kafka-canary-producer
+      access: write
+    - team: dvh-etl-tools
+      application: kafka-canary-consumer
+      access: read
