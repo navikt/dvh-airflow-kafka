@@ -8,8 +8,8 @@ metadata:
 spec:
   kafka:
     pool: nav-dev
-  secretName: kafka-canary-producer-credentials
-  protected: true
+    secretName: kafka-canary-producer-credentials
+    protected: true
 ---
 apiVersion: aiven.nais.io/v2
 kind: AivenApplication
@@ -21,8 +21,8 @@ metadata:
 spec:
   kafka:
     pool: nav-dev
-  secretName: kafka-canary-consumer-credentials
-  protected: true
+    secretName: kafka-canary-consumer-credentials
+    protected: true
 ---
 apiVersion: kafka.nais.io/v1
 kind: Topic
