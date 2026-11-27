@@ -9,7 +9,7 @@ spec:
   kafka:
     pool: nav-dev
     secretName: kafka-canary-producer-credentials
-    protected: true
+  protected: true
 ---
 apiVersion: aiven.nais.io/v2
 kind: AivenApplication
@@ -22,7 +22,7 @@ spec:
   kafka:
     pool: nav-dev
     secretName: kafka-canary-consumer-credentials
-    protected: true
+  protected: true
 ---
 apiVersion: kafka.nais.io/v1
 kind: Topic
